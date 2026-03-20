@@ -166,7 +166,7 @@ def analyze_correlated_signatures(df, output_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Módulo de Processamento e Análise de Dados EDA.")
-    parser.add_argument("--mode", choices=["merge", "sample", "analyze"], required=True, help="Modo de operação")
+    parser.add_argument("--mode", choices=["merge", "sample", "analyze", "balance", "merge_ml"], required=True, help="Modo de operação")
     
     # Argumentos para merge/sample
     parser.add_argument("--dir", default="data/datasets/eda", help="Diretório alvo")
@@ -207,3 +207,47 @@ if __name__ == "__main__":
             generate_eda_plots(df_combined, args.outdir)
             analyze_correlated_signatures(df_combined, args.outdir)
             print("✅ Análise concluída com sucesso!")
+            
+    # ========================================================
+    # NOVOS MODOS PARA MACHINE LEARNING (POOL GLOBAL)
+    # ========================================================
+    elif args.mode == "merge_ml":
+        print("=========================================================")
+        print("🗂️ IoT-Shield: Criando Pool Global de PCAPs")
+        print("=========================================================\n")
+        os.makedirs("data/datasets/unified/train", exist_ok=True)
+        os.makedirs("data/datasets/unified/test", exist_ok=True)
+        
+        merge_csvs("data/datasets/train/*.csv", "data/datasets/unified/train/global_train.csv")
+        merge_csvs("data/datasets/test/*.csv", "data/datasets/unified/test/global_test.csv")
+        print("\n[SUCCESS] Todos os PCAPs foram unidos num Pool Global!")
+
+    elif args.mode == "balance":
+        print("=========================================================")
+        print("⚖️ IoT-Shield: Motor de Balanceamento Global (C-Core)")
+        print("=========================================================\n")
+        
+        c_source = "src/fast_balancer.c"
+        c_binary = "results/fast_balancer"
+        
+        if not os.path.exists(c_binary):
+            print(f"[INFO] Compilando motor C de alta performance ({c_source})...")
+            os.makedirs("results", exist_ok=True)
+            os.system(f"gcc -O3 {c_source} -o {c_binary}")
+            
+        os.makedirs("data/datasets/balanced/train", exist_ok=True)
+        os.makedirs("data/datasets/balanced/test", exist_ok=True)
+        
+        train_in = "data/datasets/unified/train/global_train.csv"
+        train_out = "data/datasets/balanced/train/balanced_train.csv"
+        if os.path.exists(train_in):
+            print(f"⏳ Balanceando Global Train: {train_in}")
+            os.system(f"./{c_binary} {train_in} {train_out} 1.0")
+            
+        test_in = "data/datasets/unified/test/global_test.csv"
+        test_out = "data/datasets/balanced/test/balanced_test.csv"
+        if os.path.exists(test_in):
+            print(f"⏳ Balanceando Global Test: {test_in}")
+            os.system(f"./{c_binary} {test_in} {test_out} 1.0")
+            
+        print("\n[SUCCESS] Datasets globais balanceados na velocidade nativa do hardware!")

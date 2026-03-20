@@ -26,6 +26,7 @@ fi
 # Configurações Padrão (ML)
 ESTIMATORS=15
 DEPTH=8
+MAX_RAM=4096 # 4GB padrão de segurança
 MODEL_PATH="results/iot_shield_model.pkl"
 C_MODEL_PATH="results/iot_model.c"
 
@@ -39,6 +40,7 @@ EXTRACT_EDA=false
 SAMPLE_EDA=false
 ANALYZE_EDA=false
 USE_FULL_EDA=false
+BALANCE=false
 TRAIN=false
 EXPORT=false
 BENCHMARK=false
@@ -57,6 +59,7 @@ show_help() {
     echo -e "  --use-full-eda     Força a análise a usar a base de dados GIGANTE original (Ignora a amostra)"
     
     echo -e "\nOpções de Machine Learning:"
+    echo -e "  --balance          Balanceia as classes (1:1) usando o motor C para evitar Overfitting"
     echo -e "  --train            Treina o modelo ML e gera gráficos de avaliação"
     echo -e "  --export           Converte o modelo para código C nativo"
     echo -e "  --benchmark        Roda os benchmarks de performance (Python e C)"
@@ -66,7 +69,7 @@ show_help() {
     echo -e "\nComandos Macro (Pipelines Completos):"
     echo -e "  --data-science     Executa: Extração EDA -> Amostragem -> Análise"
     echo -e "  --pipeline         Executa: Treino -> Exportação -> Benchmark (Pula extração)"
-    echo -e "  --full             Executa: Extração Paralela -> Treino -> Exportação -> Benchmark"
+    echo -e "  --full             Executa: Extração Paralela -> Balanceamento C -> Treino -> Exportação -> Benchmark"
     echo -e "  --help             Mostra este menu de ajuda\n"
     exit 0
 }
@@ -87,6 +90,7 @@ while [[ "$#" -gt 0 ]]; do
         # Data Science
         --sample-eda) SAMPLE_EDA=true; shift ;;
         --analyze-eda) ANALYZE_EDA=true; shift ;;
+        --balance) BALANCE=true; shift ;;
         --mb) EDA_MB="$2"; shift 2 ;;
         --use-full-eda) USE_FULL_EDA=true; shift ;;
         --data-science) EXTRACT_EDA=true; SAMPLE_EDA=true; ANALYZE_EDA=true; shift ;;
@@ -97,11 +101,11 @@ while [[ "$#" -gt 0 ]]; do
         --benchmark) BENCHMARK=true; shift ;;
         --estimators) ESTIMATORS="$2"; shift 2 ;;
         --depth) DEPTH="$2"; shift 2 ;;
+        --max-ram) MAX_RAM="$2"; shift 2 ;;
         
         # Macros
         --pipeline) TRAIN=true; EXPORT=true; BENCHMARK=true; shift ;;
-        --full) EXTRACT_PAR=true; TRAIN=true; EXPORT=true; BENCHMARK=true; shift ;;
-        
+        --full) EXTRACT_PAR=true; BALANCE=true; TRAIN=true; EXPORT=true; BENCHMARK=true; shift ;;
         --help) show_help ;;
         *) echo -e "${RED}[ERROR] Parâmetro desconhecido: $1${NC}"; show_help ;;
     esac
@@ -178,6 +182,19 @@ if [ "$ANALYZE_EDA" = true ]; then
     echo -e "${GREEN}[SUCCESS] Gráficos e Relatório gerados em 'results/eda_plots/'.\n${NC}"
 fi
 
+# --- FASE 0.5: BALANCEAMENTO DE CLASSES (C-CORE) ---
+if [ "$BALANCE" = true ]; then
+    echo -e "${YELLOW}>>> FASE 0.5: POOL GLOBAL E BALANCEAMENTO <<<${NC}"
+    
+    # 1. Primeiro cria os arquivos gigantes globais (junta todos os PCAPs)
+    python src/data_processor.py --mode merge_ml
+    
+    # 2. Depois roda o motor C para balancear os arquivos gigantes
+    python src/data_processor.py --mode balance
+    
+    echo -e "${GREEN}[SUCCESS] Classes globais 1:1 igualadas perfeitamente.\n${NC}"
+fi
+
 # ==============================================================================
 # BLOCO 1: MACHINE LEARNING & DEPLOYMENT
 # ==============================================================================
@@ -185,12 +202,29 @@ fi
 # --- FASE 1: TREINAMENTO E AVALIAÇÃO ---
 if [ "$TRAIN" = true ]; then
     echo -e "${YELLOW}>>> FASE 1: TREINAMENTO DO MODELO E AVALIAÇÃO <<<${NC}"
+    
+    if [ "$BALANCE" = true ]; then
+        TARGET_TRAIN="data/datasets/balanced/train"
+        TARGET_TEST="data/datasets/balanced/test"
+        echo -e "${BLUE}[INFO] Usando base de dados GLOBAL BALANCEADA (Anti-Overfitting)...${NC}"
+    else
+        # Se você quiser testar sem balancear, o script garante que os PCAPs estão unidos
+        if [ ! -d "data/datasets/unified" ]; then
+            python src/data_processor.py --mode merge_ml
+        fi
+        TARGET_TRAIN="data/datasets/unified/train"
+        TARGET_TEST="data/datasets/unified/test"
+        echo -e "${RED}[WARNING] Usando base de dados GLOBAL ORIGINAL (Modo Overfitting)...${NC}"
+    fi
+
     python src/model_pipeline.py \
-        --train-dir data/datasets/train \
-        --test-dir data/datasets/test \
+        --train-dir $TARGET_TRAIN \
+        --test-dir $TARGET_TEST \
         --output $MODEL_PATH \
         --estimators $ESTIMATORS \
-        --depth $DEPTH
+        --depth $DEPTH \
+        --max-ram $MAX_RAM
+        
     echo -e "${GREEN}[SUCCESS] Fase de treinamento e geração de gráficos concluída.\n${NC}"
 fi
 

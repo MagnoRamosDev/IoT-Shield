@@ -3,54 +3,71 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/resource.h>
-#include <sys/time.h>
 
-// A função gerada pelo m2cgen geralmente se chama 'score' e recebe um array de double
-// Certifique-se de que a assinatura aqui bate com o que o m2cgen gerou no iot_model.c
-extern double score(double * input); 
+// Declaração da função gerada pelo m2cgen (dentro do iot_model.c)
+void score(double * input, double * output);
+
+// Função auxiliar para imprimir números com separador de milhar (ex: 8,187,842)
+void print_with_commas(long n) {
+    if (n < 1000) {
+        printf("%ld", n);
+        return;
+    }
+    print_with_commas(n / 1000);
+    printf(",%03ld", n % 1000);
+}
 
 int main(int argc, char *argv[]) {
-    // Padrão de 50 milhões, mas pode ser sobrescrito pelo terminal
-    long iterations = 50000000; 
-    
-    if (argc > 1) {
-        iterations = atol(argv[1]);
+    if (argc < 2) {
+        printf("Uso: %s <num_iteracoes>\n", argv[0]);
+        return 1;
     }
 
-    struct rusage usage;
-    struct timeval start, end;
-    volatile double target; // Evita que o compilador ignore o loop na otimização -O3
+    long iterations = atol(argv[1]);
+    printf("\n🧪 IoT-Shield: Benchmark C-Native (Hardware + Performance)\n");
+    printf("⚙️ Iterações alvo: ");
+    print_with_commas(iterations);
+    printf("\n\n");
 
-    printf("🧪 IoT-Shield: Benchmark C-Native (Hardware + Performance)\n");
-    printf("⚙️ Iterações alvo: %ld\n\n", iterations);
+    // As nossas 9 Features do modelo
+    double input[9] = {1500.0, 1460.0, 64.0, 1.0, 0.0, 0.0, 65535.0, 24.0, 0.15};
+    double output[2]; 
 
-    // Array simulando as 9 features extraídas do pacote de rede
-    double dummy_packet[9] = {64.0, 0.05, 512.0, 0.0, 1.0, 40.0, 60.0, 2.0, 0.0};
+    clock_t start = clock();
 
-    gettimeofday(&start, NULL);
-
+    // Loop de estresse do TinyML
     for (long i = 0; i < iterations; i++) {
-        // Chamando o modelo transpilado
-        target = score(dummy_packet);
+        input[8] = (double)(i % 100) / 100.0; 
+        score(input, output); 
     }
 
-    gettimeofday(&end, NULL);
-    getrusage(RUSAGE_SELF, &usage);
+    clock_t end = clock();
+    double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
-    // Cálculos de Performance
-    double time_taken = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
-    double throughput = iterations / time_taken;
-    double latency_ns = (time_taken / iterations) * 1e9;
-    double ram_mb = (double)usage.ru_maxrss / 1024.0; 
+    // --- Medição do Consumo de RAM (RSS) ---
+    struct rusage r_usage;
+    getrusage(RUSAGE_SELF, &r_usage);
+    double max_ram_mb = (double)(r_usage.ru_maxrss) / 1024.0;
 
-    printf("====================================================\n");
-    printf("📊 FINAL BENCHMARK REPORT (C-NATIVE)\n");
-    printf("====================================================\n");
-    printf("⏱️ Tempo de Execução:    %.4f segundos\n", time_taken);
-    printf("🚀 Throughput:           %.0f pacotes/segundo\n", throughput);
-    printf("⚡ Latência Média:       %.2f nanosegundos (ns)\n", latency_ns);
-    printf("🧠 Pico de Uso de RAM:   %.2f MB\n", ram_mb);
-    printf("====================================================\n");
+    // --- Cálculos de Performance ---
+    double latency_ms = 0.0;
+    long throughput = 0;
+    if (time_spent > 0) {
+        latency_ms = (time_spent / iterations) * 1000.0;
+        throughput = (long)(iterations / time_spent);
+    }
+
+    // --- Saída idêntica ao Python ---
+    printf("==================================================\n");
+    printf("📊 RESULTADOS DO BENCHMARK (C-NATIVE - HARDWARE)\n");
+    printf("==================================================\n");
+    printf("📁 Consumo de RAM do Modelo: %.2f MB\n", max_ram_mb);
+    printf("⏱️ Tempo de Execução:        %.4f segundos\n", time_spent);
+    printf("⚡ Latência Média p/ Pacote: %.6f ms\n", latency_ms);
+    printf("🚀 Throughput Estimado:      ");
+    print_with_commas(throughput);
+    printf(" pacotes/s\n");
+    printf("==================================================\n");
 
     return 0;
 }

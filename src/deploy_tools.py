@@ -5,6 +5,7 @@ import joblib
 import argparse
 import psutil
 import numpy as np
+import pandas as pd  # <-- Adicionado para não dar erro do 'pd'
 import m2cgen as m2c
 
 def export_model_to_c(model_path, output_c_path):
@@ -46,12 +47,15 @@ def run_python_benchmark(model_path, num_packets):
 
     # 3. Benchmark de Velocidade de Inferência
     print(f"[INFO] Simulando inferência para {num_packets:,} pacotes sintéticos...")
-    dummy_data = np.random.rand(num_packets, 9)
+    
+    feature_cols = ['total_size_bytes', 'payload_size_bytes', 'ttl', 'is_tcp', 'is_udp', 'is_icmp', 'tcp_window', 'tcp_flag', 'iat_ms']
+    dummy_data = pd.DataFrame(np.random.rand(num_packets, 9), columns=feature_cols)
     
     start_inference = time.time()
     model.predict(dummy_data)
     total_inference_time = time.time() - start_inference
     
+    # Cálculos restaurados!
     avg_latency_ms = (total_inference_time / num_packets) * 1000
     estimated_throughput = int(num_packets / total_inference_time) if total_inference_time > 0 else 0
 
