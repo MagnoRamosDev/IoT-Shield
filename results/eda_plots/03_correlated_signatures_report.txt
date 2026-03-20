@@ -1,0 +1,254 @@
+=========================================================
+🛡️  RELATÓRIO DE ASSINATURAS CORRELACIONADAS (IoT-Shield)
+=========================================================
+
+
+============================================================
+>>> TOP 15 FLUXOS CORRELACIONADOS: MALIGNO (MIRAI) <<<
+============================================================
+
+🔥 ASSINATURA REPETIDA 308,144 VEZES
+   ├─ Atacante/Origem: 192.168.1.198
+   ├─ Alvo/Destino:    96.244.2.114 (Porta: 27015.0)
+   ├─ Metadados:       Proto: UDP | TTL: 64 | Tamanho: 25 bytes
+   ├─ Frequência:      1,039.37 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 0.96 ms
+   └─ Payload:         ....TSource Engine Query.
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 27,259 VEZES
+   ├─ Atacante/Origem: 192.168.1.199
+   ├─ Alvo/Destino:    86.136.151.56 (Porta: 80.0)
+   ├─ Metadados:       Proto: UDP | TTL: 64 | Tamanho: 1337 bytes
+   ├─ Frequência:      90.62 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 11.04 ms
+   └─ Payload:         BEOZLEHHUODPWLLWQHTWBNMSNVMDRQWPLATZGATPSXDMCXTWRJCIZVMTNCMBZOJRKKFDGNVMMJHGDXCO ... [TRUNCADO]
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 615 VEZES
+   ├─ Atacante/Origem: 192.168.1.195
+   ├─ Alvo/Destino:    123.59.209.185 (Porta: 80.0)
+   ├─ Metadados:       Proto: TCP | TTL: 255 | Tamanho: 1024 bytes
+   ├─ Frequência:      20.57 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 48.69 ms
+   └─ Payload:         ................................................................................ ... [TRUNCADO]
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 340 VEZES
+   ├─ Atacante/Origem: 192.168.1.195
+   ├─ Alvo/Destino:    74.91.117.248 (Porta: 5376.0)
+   ├─ Metadados:       Proto: UDP | TTL: 64 | Tamanho: 1472 bytes
+   ├─ Frequência:      14.12 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 71.01 ms
+   └─ Payload:         SUMMIT.. %s, STD Flood Against %s Finished!.....Incorrect Usage, %s :XMAS <Targe ... [TRUNCADO]
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 71 VEZES
+   ├─ Atacante/Origem: 192.168.1.193
+   ├─ Alvo/Destino:    134.209.72.171 (Porta: 4554.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 11 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 405,728.39 ms
+   └─ Payload:         arch armv7.
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 36 VEZES
+   ├─ Atacante/Origem: 192.168.1.197
+   ├─ Alvo/Destino:    185.244.25.108 (Porta: 4441.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 2 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 2,426,319.74 ms
+   └─ Payload:         ..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 29 VEZES
+   ├─ Atacante/Origem: 192.168.1.195
+   ├─ Alvo/Destino:    185.244.25.235 (Porta: 6667.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 60 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 508,800.17 ms
+   └─ Payload:         NICK [ARM4T|HVLLTLBT].USER TALMK localhost localhost :TALMK.
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 23 VEZES
+   ├─ Atacante/Origem: 192.168.1.195
+   ├─ Alvo/Destino:    185.244.25.235 (Porta: 6667.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 25 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 3,338,926.21 ms
+   └─ Payload:         PONG :irc.Summit.gov.GoV.
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 22 VEZES
+   ├─ Atacante/Origem: 192.168.1.195
+   ├─ Alvo/Destino:    185.244.25.235 (Porta: 6667.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 62 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 1,515,677.36 ms
+   └─ Payload:         NICK [ARM4T|PCVREB].USER VHIDFQC localhost localhost :VHIDFQC.
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 17 VEZES
+   ├─ Atacante/Origem: 192.168.1.195
+   ├─ Alvo/Destino:    1.1.1.1 (Porta: 256.0)
+   ├─ Metadados:       Proto: UDP | TTL: 64 | Tamanho: 1472 bytes
+   ├─ Frequência:      19.73 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 53.86 ms
+   └─ Payload:         SUMMIT.. %s, STD Flood Against %s Finished!.....Incorrect Usage, %s :XMAS <Targe ... [TRUNCADO]
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 12 VEZES
+   ├─ Atacante/Origem: 192.168.1.198
+   ├─ Alvo/Destino:    142.11.219.83 (Porta: 45.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 2 bytes
+   ├─ Frequência:      0.01 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 177,221.03 ms
+   └─ Payload:         ..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 3 VEZES
+   ├─ Atacante/Origem: 192.168.1.199
+   ├─ Alvo/Destino:    46.101.251.172 (Porta: 23.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 5 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 1,830,318.85 ms
+   └─ Payload:         PONG.
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 3 VEZES
+   ├─ Atacante/Origem: 192.168.1.198
+   ├─ Alvo/Destino:    142.11.219.83 (Porta: 45.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 6 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 548,683.49 ms
+   └─ Payload:         .slavs
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 2 VEZES
+   ├─ Atacante/Origem: 192.168.1.193
+   ├─ Alvo/Destino:    192.168.1.1 (Porta: 51441.0)
+   ├─ Metadados:       Proto: TCP | TTL: 64 | Tamanho: 40 bytes
+   ├─ Frequência:      399,457.52 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 0.01 ms
+   └─ Payload:         ....h....Vi].v..U!&$!D.~.(u..1.....j.Q.;
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 2 VEZES
+   ├─ Atacante/Origem: 192.168.1.195
+   ├─ Alvo/Destino:    192.168.1.1 (Porta: 53.0)
+   ├─ Metadados:       Proto: UDP | TTL: 64 | Tamanho: 39 bytes
+   ├─ Frequência:      0.00 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 49,923,106.65 ms
+   └─ Payload:         .............1.debian.pool.ntp.org.....
+------------------------------------------------------------
+
+============================================================
+>>> TOP 15 FLUXOS CORRELACIONADOS: BENIGNO <<<
+============================================================
+
+🔥 ASSINATURA REPETIDA 3,120 VEZES
+   ├─ Atacante/Origem: 185.244.25.108
+   ├─ Alvo/Destino:    192.168.1.197 (Porta: 38030.0)
+   ├─ Metadados:       Proto: TCP | TTL: 50 | Tamanho: 2 bytes
+   ├─ Frequência:      0.07 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 14,740.10 ms
+   └─ Payload:         ..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 2,696 VEZES
+   ├─ Atacante/Origem: 185.244.25.108
+   ├─ Alvo/Destino:    192.168.1.197 (Porta: 38030.0)
+   ├─ Metadados:       Proto: TCP | TTL: 49 | Tamanho: 2 bytes
+   ├─ Frequência:      0.03 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 32,023.33 ms
+   └─ Payload:         ..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 1,988 VEZES
+   ├─ Atacante/Origem: 134.209.72.171
+   ├─ Alvo/Destino:    192.168.1.193 (Porta: 50178.0)
+   ├─ Metadados:       Proto: TCP | TTL: 50 | Tamanho: 4 bytes
+   ├─ Frequência:      0.07 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 14,767.60 ms
+   └─ Payload:         PING
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 1,984 VEZES
+   ├─ Atacante/Origem: 134.209.72.171
+   ├─ Alvo/Destino:    192.168.1.193 (Porta: 50178.0)
+   ├─ Metadados:       Proto: TCP | TTL: 50 | Tamanho: 6 bytes
+   ├─ Frequência:      0.07 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 14,797.39 ms
+   └─ Payload:         .[37m.
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 622 VEZES
+   ├─ Atacante/Origem: 185.244.25.235
+   ├─ Alvo/Destino:    192.168.1.195 (Porta: 48986.0)
+   ├─ Metadados:       Proto: TCP | TTL: 50 | Tamanho: 26 bytes
+   ├─ Frequência:      0.02 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 48,283.25 ms
+   └─ Payload:         PING :irc.Summit.gov.GoV..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 420 VEZES
+   ├─ Atacante/Origem: 185.244.25.235
+   ├─ Alvo/Destino:    192.168.1.195 (Porta: 48986.0)
+   ├─ Metadados:       Proto: TCP | TTL: 49 | Tamanho: 26 bytes
+   ├─ Frequência:      0.02 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 53,137.68 ms
+   └─ Payload:         PING :irc.Summit.gov.GoV..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 272 VEZES
+   ├─ Atacante/Origem: 185.244.25.235
+   ├─ Alvo/Destino:    192.168.1.195 (Porta: 54430.0)
+   ├─ Metadados:       Proto: TCP | TTL: 49 | Tamanho: 26 bytes
+   ├─ Frequência:      0.02 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 45,298.30 ms
+   └─ Payload:         PING :irc.Summit.gov.GoV..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 268 VEZES
+   ├─ Atacante/Origem: 185.244.25.235
+   ├─ Alvo/Destino:    192.168.1.195 (Porta: 55770.0)
+   ├─ Metadados:       Proto: TCP | TTL: 49 | Tamanho: 26 bytes
+   ├─ Frequência:      0.02 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 44,504.91 ms
+   └─ Payload:         PING :irc.Summit.gov.GoV..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 220 VEZES
+   ├─ Atacante/Origem: 46.101.251.172
+   ├─ Alvo/Destino:    192.168.1.199 (Porta: 51834.0)
+   ├─ Metadados:       Proto: TCP | TTL: 54 | Tamanho: 4 bytes
+   ├─ Frequência:      0.03 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 30,964.21 ms
+   └─ Payload:         PING
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 220 VEZES
+   ├─ Atacante/Origem: 46.101.251.172
+   ├─ Alvo/Destino:    192.168.1.199 (Porta: 51834.0)
+   ├─ Metadados:       Proto: TCP | TTL: 54 | Tamanho: 1 bytes
+   ├─ Frequência:      0.03 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 30,964.48 ms
+   └─ Payload:         .
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 176 VEZES
+   ├─ Atacante/Origem: 185.244.25.235
+   ├─ Alvo/Destino:    192.168.1.195 (Porta: 53332.0)
+   ├─ Metadados:       Proto: TCP | TTL: 50 | Tamanho: 26 bytes
+   ├─ Frequência:      0.02 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 47,052.89 ms
+   └─ Payload:         PING :irc.Summit.gov.GoV..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 128 VEZES
+   ├─ Atacante/Origem: 142.11.219.83
+   ├─ Alvo/Destino:    192.168.1.198 (Porta: 49018.0)
+   ├─ Metadados:       Proto: TCP | TTL: 48 | Tamanho: 2 bytes
+   ├─ Frequência:      0.07 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 15,152.30 ms
+   └─ Payload:         ..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 84 VEZES
+   ├─ Atacante/Origem: 142.11.219.83
+   ├─ Alvo/Destino:    192.168.1.198 (Porta: 48994.0)
+   ├─ Metadados:       Proto: TCP | TTL: 48 | Tamanho: 2 bytes
+   ├─ Frequência:      0.06 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 15,743.06 ms
+   └─ Payload:         ..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 82 VEZES
+   ├─ Atacante/Origem: 142.11.219.83
+   ├─ Alvo/Destino:    192.168.1.198 (Porta: 49942.0)
+   ├─ Metadados:       Proto: TCP | TTL: 48 | Tamanho: 2 bytes
+   ├─ Frequência:      0.07 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 13,894.72 ms
+   └─ Payload:         ..
+------------------------------------------------------------
+🔥 ASSINATURA REPETIDA 78 VEZES
+   ├─ Atacante/Origem: 142.11.219.83
+   ├─ Alvo/Destino:    192.168.1.198 (Porta: 49902.0)
+   ├─ Metadados:       Proto: TCP | TTL: 48 | Tamanho: 2 bytes
+   ├─ Frequência:      0.06 pacotes/segundo
+   ├─ Intervalo:       Um pacote enviado a cada 16,201.81 ms
+   └─ Payload:         ..
+------------------------------------------------------------

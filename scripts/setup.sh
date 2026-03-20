@@ -64,6 +64,9 @@ pip install dpkt psutil
 # C-code transpilation for TinyML Edge deployment
 pip install m2cgen
 
+# Packet Generation
+pip install requests paho-mqtt
+
 # 5. Fix Dataset Permissions (If the folder exists)
 if [ -d "Pcaps" ]; then
     echo -e "\n${BLUE}[INFO] Normalizing file ownership and permissions for the 'Pcaps' directory...${NC}"
