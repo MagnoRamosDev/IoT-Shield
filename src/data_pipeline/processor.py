@@ -227,7 +227,7 @@ if __name__ == "__main__":
         print("⚖️ IoT-Shield: Motor de Balanceamento Global (C-Core)")
         print("=========================================================\n")
         
-        c_source = "src/fast_balancer.c"
+        c_source = "src/data_pipeline/fast_balancer.c"
         c_binary = "results/fast_balancer"
         
         if not os.path.exists(c_binary):

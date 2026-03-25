@@ -1,4 +1,3 @@
-# src/extractor.py
 import argparse
 import csv
 import os
@@ -31,24 +30,17 @@ def run_ml_extraction(pcap_path, csv_path, infected_ip):
             csv_writer = csv.writer(out_file)
             csv_writer.writerow(['total_size_bytes', 'payload_size_bytes', 'ttl', 'is_tcp', 'is_udp', 'is_icmp', 'tcp_window', 'tcp_flag', 'iat_ms', 'label'])
             
-            # Usamos um iterador manual para controlar as falhas no meio do ficheiro
             pcap_iter = iter(pcap)
             
             while True:
                 try:
-                    # Tenta ler o próximo pacote
                     ts, buf = next(pcap_iter)
                 except StopIteration:
-                    break # Fim natural do ficheiro
+                    break
                 except Exception as e:
                     error_count += 1
-                    # Se houver erro de leitura (ex: pacote truncado ou corrompido)
-                    # Imprimimos o erro e deixamos o dpkt tentar ler o próximo na iteração seguinte
-                    # Nota: O dpkt avança o ponteiro do ficheiro internamente se falhar no buffer
-                    print(f"  [AVISO] Pulando pacote corrompido no offset {f_in.tell()}: {e}")
                     continue
 
-                packet_count += 1
                 try:
                     eth = dpkt.ethernet.Ethernet(buf)
                     if not isinstance(eth.data, dpkt.ip.IP): continue
@@ -57,6 +49,17 @@ def run_ml_extraction(pcap_path, csv_path, infected_ip):
                     src_ip_str = socket.inet_ntoa(ip.src)
                     
                     label = 1 if src_ip_str == infected_ip else 0
+                    
+                    # ========================================================
+                    # A MÁGICA: DESCARTA BENIGNOS DA IOT-23
+                    # ========================================================
+                    # Se não for o PCAP puramente benigno e o pacote for label 0, pula!
+                    if infected_ip != "0.0.0.0" and label == 0:
+                        continue
+                    # ========================================================
+                    
+                    packet_count += 1
+                    
                     if label == 1: malicious_count += 1
                     else: normal_count += 1
                         
@@ -76,7 +79,6 @@ def run_ml_extraction(pcap_path, csv_path, infected_ip):
                         
                     csv_writer.writerow([len(buf), payload_size_bytes, ip.ttl, is_tcp, is_udp, is_icmp, tcp_window, tcp_flag_num, f"{iat_ms:.4f}", label])
                 except Exception:
-                    # Erro na dissecação do pacote (estranho, mas possível se o buf estiver mal formado)
                     continue
 
     except Exception as e:
@@ -86,10 +88,9 @@ def run_ml_extraction(pcap_path, csv_path, infected_ip):
         
     print(f"[SUCCESS] Extração Concluída: {packet_count:,} pacotes processados.")
     if error_count > 0:
-        print(f"          ({error_count} pacotes corrompidos foram ignorados)")
+        print(f"          ({error_count} pacotes corrompidos ignorados)")
 
 def run_eda_extraction(pcap_path, output_dir, infected_ip):
-    # Lógica similar aplicada ao EDA para garantir que o Data Science não pare
     print(f"[INFO] Extração Profunda (EDA) Resiliente para: {pcap_path}")
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -123,7 +124,6 @@ def run_eda_extraction(pcap_path, output_dir, infected_ip):
                     error_count += 1
                     continue
                 
-                packet_count += 1
                 try:
                     eth = dpkt.ethernet.Ethernet(buf)
                     if not isinstance(eth.data, dpkt.ip.IP): continue
@@ -132,6 +132,15 @@ def run_eda_extraction(pcap_path, output_dir, infected_ip):
                     dst_ip_str = socket.inet_ntoa(ip.dst)
                     
                     is_malicious = (src_ip_str == infected_ip)
+                    
+                    # ========================================================
+                    # A MÁGICA PARA O EDA: DESCARTA BENIGNOS DA IOT-23
+                    # ========================================================
+                    if infected_ip != "0.0.0.0" and not is_malicious:
+                        continue
+                    # ========================================================
+
+                    packet_count += 1
                     active_writer = writer_mal if is_malicious else writer_ben
                     
                     src_port, dst_port, tcp_seq, tcp_ack, tcp_flags, tcp_window, udp_len, icmp_type, icmp_code = '', '', '', '', '', '', '', '', ''
