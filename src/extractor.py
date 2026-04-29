@@ -4,6 +4,11 @@ import multiprocessing
 import dpkt
 import socket
 import numpy as np
+try:
+    from src.dashboard import set_split_phase, set_extract_phase
+except ImportError:
+    def set_split_phase(*a, **k): pass
+    def set_extract_phase(*a, **k): pass
 
 class Welford:
     __slots__ = ['count', 'mean', 'm2', 'min_val', 'max_val']
@@ -296,6 +301,7 @@ def split_pcap_task(args):
             new_mapping.append(f"{pcap} {mal_ip}\n")
             return new_mapping
             
+        is_pcapng = pcap.endswith(".pcapng")
         print(f"Splitting {pcap} ({file_size/1024/1024:.1f} MB) into chunks of {mb_size} MB...")
         base_name = os.path.basename(pcap).replace(".pcap", "").replace(".pcapng", "")
         
@@ -303,9 +309,11 @@ def split_pcap_task(args):
             f_in = open(pcap, 'rb')
             try:
                 reader = dpkt.pcap.Reader(f_in)
+                is_pcapng = False  # confirmed plain pcap
             except ValueError:
                 f_in.seek(0)
                 reader = dpkt.pcapng.Reader(f_in)
+                is_pcapng = True
                 
             iterator = iter(reader)
             
@@ -313,6 +321,9 @@ def split_pcap_task(args):
             current_bytes = 0
             writer = None
             f_out = None
+            
+            # Use the correct extension and writer based on input format
+            out_ext = ".pcapng" if is_pcapng else ".pcap"
             
             while True:
                 try:
@@ -323,10 +334,13 @@ def split_pcap_task(args):
                     continue
                     
                 if writer is None:
-                    out_name = f"{base_name}_part{file_idx}.pcap"
+                    out_name = f"{base_name}_part{file_idx}{out_ext}"
                     f_out_path = os.path.join(splits_dir, out_name)
                     f_out = open(f_out_path, 'wb')
-                    writer = dpkt.pcap.Writer(f_out)
+                    if is_pcapng:
+                        writer = dpkt.pcapng.Writer(f_out)
+                    else:
+                        writer = dpkt.pcap.Writer(f_out)
                     new_mapping.append(f"{f_out_path} {mal_ip}\n")
                     current_bytes = 0
                     
@@ -343,7 +357,9 @@ def split_pcap_task(args):
             f_in.close()
             
         except Exception as e:
+            import traceback
             print(f"Error splitting {pcap}: {e}")
+            traceback.print_exc()
             new_mapping.append(f"{pcap} {mal_ip}\n") # fallback to original
             
     return new_mapping
@@ -362,12 +378,30 @@ def split_pcaps_if_needed(dataset_list_path, mb_size, tmp_dir, workers=4):
         lines = f.readlines()
         
     max_bytes = mb_size * 1024 * 1024
-    
+
+    # Build task list and notify dashboard
+    tasks_info = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            pcap = stripped.split(" ")[0]
+            if os.path.exists(pcap):
+                base = os.path.basename(pcap).replace(".pcap", "").replace(".pcapng", "")
+                tasks_info.append((base, os.path.getsize(pcap)))
+    set_split_phase(tasks_info, splits_dir, max_bytes)
+
     tasks = [(line, max_bytes, mb_size, splits_dir) for line in lines]
     new_mapping = []
     
     with multiprocessing.Pool(workers) as pool:
-        results = pool.map(split_pcap_task, tasks)
+        async_result = pool.map_async(split_pcap_task, tasks)
+        try:
+            # 1 hour max timeout — prevents deadlock if a worker dies silently
+            results = async_result.get(timeout=3600)
+        except multiprocessing.TimeoutError:
+            print("[!] Split phase timed out. Some files may not have been split.")
+            results = []
+            pool.terminate()
         
     for res in results:
         new_mapping.extend(res)
@@ -413,7 +447,16 @@ def run_extraction(dataset_list_path, workers, max_ram_mb, tmp_dir):
             tasks.append((pcap, mal_ip, worker_id, max_flows_per_worker, max_dict_size, tmp_dir))
             worker_id += 1
 
+    # Notify dashboard about extraction tasks
+    set_extract_phase([(t[0], t[2]) for t in tasks], tmp_dir)
+
     print(f"Starting parsing with {workers} workers. Max flows array per worker: {max_flows_per_worker}, max dictionary size: {max_dict_size}")
     
     with multiprocessing.Pool(workers) as pool:
-        pool.map(pcap_worker_task, tasks)
+        async_result = pool.map_async(pcap_worker_task, tasks)
+        try:
+            # 24 hour max timeout — prevents deadlock if a worker dies silently
+            async_result.get(timeout=86400)
+        except multiprocessing.TimeoutError:
+            print("[!] Extraction phase timed out.")
+            pool.terminate()

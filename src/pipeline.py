@@ -17,6 +17,8 @@ def main():
     parser.add_argument("--tmp-dir", type=str, default="data/tmp", help="Path to store temporary numpy chunks")
     parser.add_argument("--output-dir", type=str, default="results", help="Path to store final CSVs")
     parser.add_argument("--exclude-list", type=str, default="config/excluded_features.txt", help="File listing features to drop before training")
+    parser.add_argument("--threshold", type=float, default=0.5,
+                        help="Classification threshold (0.0-1.0). Higher = less false positives on benign, but more malicious slips through. Default: 0.5")
     parser.add_argument("--phase", type=str, choices=["all", "extract", "balance", "train"], default="all", help="Which portion of the pipeline to run")
 
     args = parser.parse_args()
@@ -66,7 +68,8 @@ def main():
             run_training(
                 train_csv=os.path.join(args.output_dir, "train.csv"),
                 test_csv=os.path.join(args.output_dir, "test.csv"),
-                exclude_file=args.exclude_list
+                exclude_file=args.exclude_list,
+                threshold=args.threshold,
             )
 
         print("\n[+] Pipeline Complete! Deleting temporary binaries...")

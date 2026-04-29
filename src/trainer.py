@@ -16,7 +16,7 @@ def load_excluded_features(exclude_file):
                     excluded.add(feat)
     return excluded
 
-def run_training(train_csv, test_csv, exclude_file):
+def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     console = Console()
     
     if not os.path.exists(train_csv) or not os.path.exists(test_csv):
@@ -60,8 +60,7 @@ def run_training(train_csv, test_csv, exclude_file):
     console.print(f"[green]  - Feature Space Dimension: {len(feature_names)}[/green]")
     
     console.print("[bold cyan][*] Training Random Forest model (with depth pruning)...[/bold cyan]")
-    # Pruned tree to prevent memorization (overfitting)
-    rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=5, random_state=42, n_jobs=-1)
+    rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=5, random_state=52, n_jobs=-1)
     rf.fit(X_train, y_train)
     
     # Calculate depth statistics
@@ -70,12 +69,16 @@ def run_training(train_csv, test_csv, exclude_file):
     console.print(f"[bold green][+] Model fitted! (Avg Tree Depth: {avg_depth:.1f} / Max Allowed: 8)[/bold green]")
     
     console.print("[bold cyan][*] Evaluating on Testing Dataset...[/bold cyan]")
-    y_pred = rf.predict(X_test)
-    
-    acc = accuracy_score(y_test, y_pred)
+    y_proba = rf.predict_proba(X_test)[:, 1]  # probability of being malicious
+    y_pred  = (y_proba >= threshold).astype(int)
+
+    console.print(f"[bold yellow]  Using classification threshold: {threshold:.2f}[/bold yellow]")
+    console.print(f"  (raise to let more benign pass; lower to catch more malicious)\n")
+
+    acc  = accuracy_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred, average='weighted', zero_division=0)
-    rec = recall_score(y_test, y_pred, average='weighted', zero_division=0)
-    f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+    rec  = recall_score(y_test, y_pred, average='weighted', zero_division=0)
+    f1   = f1_score(y_test, y_pred, average='weighted', zero_division=0)
     
     metrics_table = Table(title="Performance Metrics", show_header=True, header_style="bold magenta")
     metrics_table.add_column("Metric", style="dim", width=20)
@@ -99,12 +102,43 @@ def run_training(train_csv, test_csv, exclude_file):
     cm_table.add_row("Class 1 (Malicious)", str(cm[1][0]), str(cm[1][1]))
     
     console.print(cm_table)
-    
+
     console.print()
     console.print("[bold magenta]Classification Report:[/bold magenta]")
     console.print(classification_report(y_test, y_pred))
-    
+
+    # --- Threshold sweep table ---
     console.print()
+    console.print("[bold cyan][*] Threshold Sweep — tradeoff overview:[/bold cyan]")
+    sweep_table = Table(show_header=True, header_style="bold yellow")
+    sweep_table.add_column("Threshold",                      justify="center", style="cyan",   min_width=12)
+    sweep_table.add_column("Benign Blocked (FP)",            justify="center", style="red",    min_width=20)
+    sweep_table.add_column("Malicious Passed (FN)",          justify="center", style="yellow", min_width=22)
+    sweep_table.add_column("Accuracy",                       justify="center", style="green",  min_width=10)
+
+    n_benign    = (y_test == 0).sum()
+    n_malicious = (y_test == 1).sum()
+
+    for t in [0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90]:
+        yp = (y_proba >= t).astype(int)
+        fp = int(((yp == 1) & (y_test == 0)).sum())   # benign wrongly blocked
+        fn = int(((yp == 0) & (y_test == 1)).sum())   # malicious wrongly allowed
+        acc_t = accuracy_score(y_test, yp)
+        marker = " ◀ current" if abs(t - threshold) < 0.001 else ""
+        sweep_table.add_row(
+            f"{t:.2f}{marker}",
+            f"{fp}/{n_benign}  ({fp/n_benign*100:.1f}%)",
+            f"{fn}/{n_malicious}  ({fn/n_malicious*100:.1f}%)",
+            f"{acc_t*100:.1f}%",
+        )
+
+    console.print(sweep_table)
+    console.print(
+        "[dim]Tip: use [bold]--threshold 0.6[/bold] to block only high-confidence malicious flows,[/dim]\n"
+        "[dim]     reducing benign false-positives at the cost of passing more malicious traffic.[/dim]"
+    )
+
+
     console.print("[bold cyan][*] Extracting Feature Importances (Gini Impurity / MDI)...[/bold cyan]")
     
     # Switch from Permutation to inherent Gini importance from the trees

@@ -1,6 +1,6 @@
-dpkt==1.9.8
-psutil==5.9.8
-rich==13.7.1
-numpy==1.26.4
-pandas==2.2.1
-scikit-learn==1.4.1
+dpkt>=1.9.8
+psutil>=5.9.8
+rich>=13.7.1
+numpy>=1.26.4
+pandas>=2.2.1
+scikit-learn>=1.4.1
