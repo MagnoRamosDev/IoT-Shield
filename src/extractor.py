@@ -219,8 +219,8 @@ def pcap_worker_task(args):
                         
                     tracker = active_flows[flow_key]
                     
-                    # Absolute time limit 1s
-                    if tracker.start_time is not None and ts - tracker.start_time > 1.0:
+                    # Absolute time limit 30s
+                    if tracker.start_time is not None and ts - tracker.start_time > 60.0:
                         # Flow expired, save it
                         features = tracker.export()
                         buffer[buffer_idx] = features
