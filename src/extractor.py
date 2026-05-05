@@ -43,9 +43,10 @@ class FlowTracker:
         'src_ip', 'dst_ip', 'src_port', 'dst_port', 'protocol', 'is_malicious',
         'start_time', 'last_time', 'first_s2d_time', 'last_s2d_time', 'first_d2s_time', 'last_d2s_time',
         'b_packets', 's2d_packets', 's2d_bytes', 'd2s_packets', 'd2s_bytes',
-        'b_ps', 's2d_ps', 'd2s_ps', 'b_piat', 's2d_piat', 'd2s_piat'
+        'b_ps', 's2d_ps', 'd2s_ps', 'b_piat', 's2d_piat', 'd2s_piat',
+        's2d_syn_packets', 'd2s_syn_packets', 's2d_rst_packets', 'd2s_rst_packets', 'src_concurrent', 'dst_concurrent'
     ]
-    def __init__(self, src_ip, dst_ip, src_port, dst_port, protocol, malicious_ip):
+    def __init__(self, src_ip, dst_ip, src_port, dst_port, protocol, malicious_ip, src_concurrent, dst_concurrent):
         self.src_ip = src_ip
         self.dst_ip = dst_ip
         self.src_port = src_port
@@ -53,6 +54,13 @@ class FlowTracker:
         self.protocol = protocol
         self.is_malicious = 1.0 if src_ip == malicious_ip else 0.0
         
+        self.s2d_syn_packets = 0
+        self.d2s_syn_packets = 0
+        self.s2d_rst_packets = 0
+        self.d2s_rst_packets = 0
+        self.src_concurrent = src_concurrent
+        self.dst_concurrent = dst_concurrent
+
         self.start_time = None
         self.last_time = None
         self.first_s2d_time = None
@@ -74,7 +82,7 @@ class FlowTracker:
         self.s2d_piat = Welford()
         self.d2s_piat = Welford()
 
-    def add_packet(self, pkg_src, pkg_time, pkg_size):
+    def add_packet(self, pkg_src, pkg_time, pkg_size, tcp_flags=0):
         if self.start_time is None:
             self.start_time = pkg_time
             self.first_s2d_time = pkg_time if pkg_src == self.src_ip else None
@@ -87,6 +95,18 @@ class FlowTracker:
         if self.last_time is not None:
             self.b_piat.update((pkg_time - self.last_time) * 1000.0)
         self.last_time = pkg_time
+
+        if tcp_flags & 0x02:
+            if direction == "s2d":
+                self.s2d_syn_packets += 1
+            else:
+                self.d2s_syn_packets += 1
+
+        if tcp_flags & 0x04:  # RST flag
+            if direction == "s2d":
+                self.s2d_rst_packets += 1
+            else:
+                self.d2s_rst_packets += 1
 
         if direction == "s2d":
             self.s2d_packets += 1
@@ -133,6 +153,9 @@ class FlowTracker:
             b_min_piat, b_max_piat, b_mean_piat, b_std_piat,
             s2d_min_piat, s2d_max_piat, s2d_mean_piat, s2d_std_piat,
             d2s_min_piat, d2s_max_piat, d2s_mean_piat, d2s_std_piat,
+            float(self.s2d_syn_packets), float(self.d2s_syn_packets), float(self.s2d_syn_packets + self.d2s_syn_packets),
+            float(self.s2d_rst_packets), float(self.d2s_rst_packets), float(self.s2d_rst_packets + self.d2s_rst_packets),
+            float(self.src_concurrent), float(self.dst_concurrent), float(self.src_concurrent + self.dst_concurrent),
             self.is_malicious
         ]
 
@@ -141,15 +164,14 @@ def pcap_worker_task(args):
     if not os.path.exists(pcap_path):
         return
         
-    print(f"Worker {worker_id} starting {pcap_path} with Malicious IP: {malicious_ip}")
-    
     # Pre-allocate shared buffer RAM for THIS worker
-    # 36 features, float32 -> ~144 bytes per flow
-    buffer = np.zeros((max_flows, 36), dtype=np.float32)
+    # 45 features, float32 -> ~180 bytes per flow
+    buffer = np.zeros((max_flows, 45), dtype=np.float32)
     buffer_idx = 0
     chunk_counter = 0
     
     active_flows = {}
+    ip_flow_count = {}
     
     try:
         with open(pcap_path, 'rb') as f:
@@ -182,7 +204,12 @@ def pcap_worker_task(args):
                     dst_ip = socket.inet_ntoa(ip.dst)
                     
                     protocol = ip.p
-                    if isinstance(ip.data, dpkt.tcp.TCP) or isinstance(ip.data, dpkt.udp.UDP):
+                    tcp_flags = 0
+                    if isinstance(ip.data, dpkt.tcp.TCP):
+                        src_port = ip.data.sport
+                        dst_port = ip.data.dport
+                        tcp_flags = ip.data.flags
+                    elif isinstance(ip.data, dpkt.udp.UDP):
                         src_port = ip.data.sport
                         dst_port = ip.data.dport
                     else:
@@ -204,6 +231,11 @@ def pcap_worker_task(args):
                             oldest_key = next(iter(active_flows))
                             oldest_tracker = active_flows.pop(oldest_key)
                             
+                            ip_flow_count[oldest_tracker.src_ip] -= 1
+                            if ip_flow_count[oldest_tracker.src_ip] <= 0: del ip_flow_count[oldest_tracker.src_ip]
+                            ip_flow_count[oldest_tracker.dst_ip] -= 1
+                            if ip_flow_count[oldest_tracker.dst_ip] <= 0: del ip_flow_count[oldest_tracker.dst_ip]
+                            
                             features = oldest_tracker.export()
                             buffer[buffer_idx] = features
                             buffer_idx += 1
@@ -215,20 +247,29 @@ def pcap_worker_task(args):
                                 buffer_idx = 0
                                 buffer.fill(0)
                         
-                        active_flows[flow_key] = FlowTracker(src_ip, dst_ip, src_port, dst_port, protocol, malicious_ip)
+                        ip_flow_count[src_ip] = ip_flow_count.get(src_ip, 0) + 1
+                        ip_flow_count[dst_ip] = ip_flow_count.get(dst_ip, 0) + 1
+                        active_flows[flow_key] = FlowTracker(src_ip, dst_ip, src_port, dst_port, protocol, malicious_ip, ip_flow_count[src_ip], ip_flow_count[dst_ip])
                         
                     tracker = active_flows[flow_key]
                     
-                    # Absolute time limit 30s
-                    if tracker.start_time is not None and ts - tracker.start_time > 60.0:
+                    # Absolute time limit 15s
+                    if tracker.start_time is not None and ts - tracker.start_time > 15.0:
                         # Flow expired, save it
                         features = tracker.export()
                         buffer[buffer_idx] = features
                         buffer_idx += 1
                         
+                        ip_flow_count[tracker.src_ip] -= 1
+                        if ip_flow_count[tracker.src_ip] <= 0: del ip_flow_count[tracker.src_ip]
+                        ip_flow_count[tracker.dst_ip] -= 1
+                        if ip_flow_count[tracker.dst_ip] <= 0: del ip_flow_count[tracker.dst_ip]
+                        
                         # Start new flow
                         del active_flows[flow_key]
-                        tracker = FlowTracker(src_ip, dst_ip, src_port, dst_port, protocol, malicious_ip)
+                        ip_flow_count[src_ip] = ip_flow_count.get(src_ip, 0) + 1
+                        ip_flow_count[dst_ip] = ip_flow_count.get(dst_ip, 0) + 1
+                        tracker = FlowTracker(src_ip, dst_ip, src_port, dst_port, protocol, malicious_ip, ip_flow_count[src_ip], ip_flow_count[dst_ip])
                         active_flows[flow_key] = tracker
                         
                         # Buffer dump logic
@@ -238,7 +279,7 @@ def pcap_worker_task(args):
                             buffer_idx = 0
                             buffer.fill(0) # optional clear
                             
-                    tracker.add_packet(src_ip, ts, len(buf))
+                    tracker.add_packet(src_ip, ts, len(buf), tcp_flags)
                     
                     # Periodic eviction of old/stale flows to prevent unlimited RAM growth
                     if packet_count % 50000 == 0:
@@ -257,6 +298,11 @@ def pcap_worker_task(args):
                                     buffer.fill(0)
                         
                         for k in keys_to_delete:
+                            old_tracker = active_flows[k]
+                            ip_flow_count[old_tracker.src_ip] -= 1
+                            if ip_flow_count[old_tracker.src_ip] <= 0: del ip_flow_count[old_tracker.src_ip]
+                            ip_flow_count[old_tracker.dst_ip] -= 1
+                            if ip_flow_count[old_tracker.dst_ip] <= 0: del ip_flow_count[old_tracker.dst_ip]
                             del active_flows[k]
                             
                 except Exception:
@@ -277,8 +323,12 @@ def pcap_worker_task(args):
             if buffer_idx > 0:
                 np.save(os.path.join(tmp_dir, f"w{worker_id}_c{chunk_counter}.npy"), buffer[:buffer_idx])
                 
-    except Exception as e:
-        print(f"Error parsing pcap {pcap_path}: {e}")
+        # Marker para o dashboard
+        open(os.path.join(tmp_dir, f"w{worker_id}.done"), "w").close()
+                
+    except Exception:
+        # Marker de erro para o dashboard
+        open(os.path.join(tmp_dir, f"w{worker_id}.err"), "w").close()
 
 def split_pcap_task(args):
     line, max_bytes, mb_size, splits_dir = args
@@ -302,7 +352,6 @@ def split_pcap_task(args):
             return new_mapping
             
         is_pcapng = pcap.endswith(".pcapng")
-        print(f"Splitting {pcap} ({file_size/1024/1024:.1f} MB) into chunks of {mb_size} MB...")
         base_name = os.path.basename(pcap).replace(".pcap", "").replace(".pcapng", "")
         
         try:
@@ -416,8 +465,8 @@ def run_extraction(dataset_list_path, workers, max_ram_mb, tmp_dir):
         lines = f.readlines()
         
     tasks = []
-    # 36 floats of 4 bytes = 144 bytes per flow
-    bytes_per_flow = 144
+    # 45 floats of 4 bytes = 180 bytes per flow
+    bytes_per_flow = 180
     
     # Calculate how many flows we can fit in RAM PER WORKER
     # Reserve 20% for Python object overhead
@@ -450,8 +499,6 @@ def run_extraction(dataset_list_path, workers, max_ram_mb, tmp_dir):
     # Notify dashboard about extraction tasks
     set_extract_phase([(t[0], t[2]) for t in tasks], tmp_dir)
 
-    print(f"Starting parsing with {workers} workers. Max flows array per worker: {max_flows_per_worker}, max dictionary size: {max_dict_size}")
-    
     with multiprocessing.Pool(workers) as pool:
         async_result = pool.map_async(pcap_worker_task, tasks)
         try:

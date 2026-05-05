@@ -45,6 +45,39 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     X_train_df = train_df.drop(columns=['is_malicious'])
     X_test_df = test_df.drop(columns=['is_malicious'])
     
+    # === Feature Engineering ===
+    # 1. Binarize Standard Deviation (is_constant_payload)
+    if "src2dst_stddev_ps" in X_train_df.columns:
+        X_train_df["is_constant_payload"] = (X_train_df["src2dst_stddev_ps"] < 1.0).astype(float)
+        X_test_df["is_constant_payload"] = (X_test_df["src2dst_stddev_ps"] < 1.0).astype(float)
+        console.print("[dim]  - Nova feature criada: is_constant_payload (1 se stddev < 1.0)[/dim]")
+
+    # 2. Flow Rate (flows per sec) to handle NAT safely with Clipping
+    if "src2dst_concurrent_flows" in X_train_df.columns and "bidirectional_duration_ms" in X_train_df.columns:
+        train_dur_sec = X_train_df["bidirectional_duration_ms"].replace(0, 1.0) / 1000.0
+        test_dur_sec = X_test_df["bidirectional_duration_ms"].replace(0, 1.0) / 1000.0
+        # Calcula a taxa (fluxos por segundo) e aplica saturação para evitar domínio de outliers absurdos
+        X_train_df["src2dst_flow_rate"] = (X_train_df["src2dst_concurrent_flows"] / train_dur_sec).clip(upper=2000)
+        X_test_df["src2dst_flow_rate"] = (X_test_df["src2dst_concurrent_flows"] / test_dur_sec).clip(upper=2000)
+        console.print("[dim]  - Nova feature criada: src2dst_flow_rate (fluxos por seg, limite max=1000)[/dim]")
+
+    # 3. Asymmetry (In/Out Ratio)
+    if "src2dst_packets" in X_train_df.columns and "dst2src_packets" in X_train_df.columns:
+        train_dst_pkts = X_train_df["dst2src_packets"].replace(0, 1.0)
+        test_dst_pkts = X_test_df["dst2src_packets"].replace(0, 1.0)
+        X_train_df["in_out_packet_ratio"] = (X_train_df["src2dst_packets"] / train_dst_pkts).clip(upper=100)
+        X_test_df["in_out_packet_ratio"] = (X_test_df["src2dst_packets"] / test_dst_pkts).clip(upper=100)
+        console.print("[dim]  - Nova feature criada: in_out_packet_ratio (src2dst_packets / dst2src_packets)[/dim]")
+
+    # 4. Incomplete Handshake Ratio (SYN packets / Total Packets)
+    if "src2dst_syn_packets" in X_train_df.columns and "src2dst_packets" in X_train_df.columns:
+        train_src_pkts = X_train_df["src2dst_packets"].replace(0, 1.0)
+        test_src_pkts = X_test_df["src2dst_packets"].replace(0, 1.0)
+        X_train_df["syn_to_total_ratio"] = X_train_df["src2dst_syn_packets"] / train_src_pkts
+        X_test_df["syn_to_total_ratio"] = X_test_df["src2dst_syn_packets"] / test_src_pkts
+        console.print("[dim]  - Nova feature criada: syn_to_total_ratio (syn_packets / total_src_packets)[/dim]")
+    # ===========================
+    
     columns_to_drop = [col for col in excluded_features if col in X_train_df.columns]
     
     if columns_to_drop:
@@ -52,6 +85,14 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         X_train_df.drop(columns=columns_to_drop, inplace=True)
         X_test_df.drop(columns=columns_to_drop, inplace=True)
         
+    # Saturação (Clipping) para forçar o modelo a aprender com as outras features
+    concurrent_features = ["src2dst_concurrent_flows", "dst2src_concurrent_flows", "bidirectional_concurrent_flows"]
+    for col in concurrent_features:
+        if col in X_train_df.columns:
+            X_train_df[col] = X_train_df[col].clip(upper=10)
+            X_test_df[col] = X_test_df[col].clip(upper=10)
+            console.print(f"[dim]  - Saturação (Clipping) aplicada em {col} (limite máximo = 10)[/dim]")
+
     feature_names = X_train_df.columns.tolist()
     X_train = X_train_df.values
     X_test = X_test_df.values
@@ -60,7 +101,11 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     console.print(f"[green]  - Feature Space Dimension: {len(feature_names)}[/green]")
     
     console.print("[bold cyan][*] Training Random Forest model (with depth pruning)...[/bold cyan]")
-    rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=5, random_state=52, n_jobs=-1)
+    
+    # Para testar a redução de feature dominance por Subsampling, comente a linha abaixo e descomente a seguinte:
+    #rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=5, random_state=52, n_jobs=-1)
+    rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=5, random_state=52, n_jobs=-1, max_features=2)
+    
     rf.fit(X_train, y_train)
     
     # Calculate depth statistics
@@ -156,8 +201,36 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         importance_val = importances[idx]
         feat_name = feature_names[idx]
         
-        # Shows percentage impact like 25.14% instead of 0.0001 probability drops
         feat_table.add_row(f"{i+1}", feat_name, f"{importance_val * 100:.2f}%")
         
     console.print(feat_table)
-    console.print("[bold green][+] Phase 3 Completed![/bold green]")
+    
+    # Save misclassified flows
+    out_dir = os.path.dirname(test_csv)
+    
+    misclassified_mask = y_pred != y_test
+    misclassified_count = misclassified_mask.sum()
+    if misclassified_count > 0:
+        misclassified_df = test_df[misclassified_mask].copy()
+        misclassified_df['predicted_label'] = y_pred[misclassified_mask]
+        misclassified_df['probability_malicious'] = y_proba[misclassified_mask]
+        
+        misclass_path = os.path.join(out_dir, "misclassified.csv")
+        misclassified_df.to_csv(misclass_path, index=False)
+        console.print(f"\n[bold red][*] Exported {misclassified_count} misclassified flows to: {misclass_path}[/bold red]")
+    else:
+        console.print(f"\n[bold green][*] No misclassified flows to export![/bold green]")
+
+    # Save correctly classified flows
+    correct_mask = y_pred == y_test
+    correct_count = correct_mask.sum()
+    if correct_count > 0:
+        correct_df = test_df[correct_mask].copy()
+        correct_df['predicted_label'] = y_pred[correct_mask]
+        correct_df['probability_malicious'] = y_proba[correct_mask]
+        
+        correct_path = os.path.join(out_dir, "correctly_classified.csv")
+        correct_df.to_csv(correct_path, index=False)
+        console.print(f"[bold green][*] Exported {correct_count} correctly classified flows to: {correct_path}[/bold green]")
+
+    console.print("\n[bold green][+] Phase 3 Completed![/bold green]")

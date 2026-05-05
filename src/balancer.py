@@ -21,7 +21,7 @@ def run_balancing(tmp_dir, output_dir):
         except Exception:
             continue
         for row_idx in range(chunk.shape[0]):
-            cls   = int(chunk[row_idx, 35])
+            cls   = int(chunk[row_idx, 44])
             proto = int(chunk[row_idx, 2])
             raw_counts[(cls, proto)] += 1
 
@@ -90,6 +90,9 @@ def run_balancing(tmp_dir, output_dir):
         "bidirectional_min_piat_ms", "bidirectional_max_piat_ms", "bidirectional_mean_piat_ms", "bidirectional_stddev_piat_ms",
         "src2dst_min_piat_ms", "src2dst_max_piat_ms", "src2dst_mean_piat_ms", "src2dst_stddev_piat_ms",
         "dst2src_min_piat_ms", "dst2src_max_piat_ms", "dst2src_mean_piat_ms", "dst2src_stddev_piat_ms",
+        "src2dst_syn_packets", "dst2src_syn_packets", "bidirectional_syn_packets",
+        "src2dst_rst_packets", "dst2src_rst_packets", "bidirectional_rst_packets",
+        "src2dst_concurrent_flows", "dst2src_concurrent_flows", "bidirectional_concurrent_flows",
         "is_malicious"
     ]
 
@@ -120,7 +123,7 @@ def run_balancing(tmp_dir, output_dir):
                 continue
 
             for row_idx in range(chunk.shape[0]):
-                cls   = int(chunk[row_idx, 35])
+                cls   = int(chunk[row_idx, 44])
                 proto = int(chunk[row_idx, 2])
                 key   = (cls, proto)
 

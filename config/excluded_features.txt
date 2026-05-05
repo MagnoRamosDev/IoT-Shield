@@ -34,8 +34,6 @@ dst2src_stddev_ps
 #bidirectional_stddev_piat_ms
 src2dst_stddev_piat_ms
 
-#Testes
-
 src2dst_mean_piat_ms
 #src2dst_stddev_ps
 src2dst_min_piat_ms
@@ -44,3 +42,11 @@ bidirectional_min_piat_ms
 bidirectional_stddev_piat_ms
 dst2src_min_piat_ms
 bidirectional_stddev_ps
+
+bidirectional_concurrent_flows
+dst2src_syn_packets
+src2dst_stddev_ps
+
+dst2src_rst_packets
+src2dst_rst_packets
+bidirectional_rst_packets

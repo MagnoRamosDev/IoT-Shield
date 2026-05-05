@@ -131,32 +131,46 @@ def _make_extract_table():
     if not tasks or not tmp_dir:
         return None
 
-    table = Table(show_header=True, header_style="bold cyan", expand=True)
-    table.add_column("Wk", style="dim",   justify="right", min_width=3)
-    table.add_column("File",              no_wrap=True)
-    table.add_column("Chunks Written",    style="green", justify="center", min_width=14)
-    table.add_column("Status",            justify="center", min_width=12)
+    # Descobre quais arquivos estão ativamente abertos na memória
+    active_files = []
+    for p in _get_pipeline_procs():
+        try:
+            for f in p.open_files():
+                path = f.path
+                if path.endswith(".pcap") or path.endswith(".pcapng"):
+                    active_files.append(os.path.basename(path))
+        except Exception:
+            pass
+    
+    active_files = list(set(active_files))
+    active_files.sort()
 
-    for pcap_path, worker_id in tasks:
-        base = os.path.basename(pcap_path)
-        # Count .npy chunks this worker has already flushed
-        pattern = os.path.join(tmp_dir, f"w{worker_id}_c*.npy")
-        chunks = len(glob.glob(pattern))
+    table = Table(show_header=False, expand=True)
+    table.add_column("Key", style="bold cyan", min_width=20)
+    table.add_column("Value")
 
-        if chunks == 0:
-            status = "[yellow]Working…[/yellow]"
-        else:
-            status = f"[cyan]{chunks} chunks[/cyan]"
+    total_tasks = len(tasks)
+    completed_tasks = len(glob.glob(os.path.join(tmp_dir, "*.done")))
+    error_tasks = len(glob.glob(os.path.join(tmp_dir, "*.err")))
+    remaining_tasks = total_tasks - completed_tasks - error_tasks
 
-        # Check if the pcap file is still open by any process (rough heuristic)
-        table.add_row(
-            str(worker_id),
-            base[:48],
-            str(chunks),
-            status,
-        )
+    table.add_row("Total de Splits na Fila", str(total_tasks))
+    table.add_row("Finalizados", f"[green]{completed_tasks}[/green]")
+    if error_tasks > 0:
+        table.add_row("Com Erro", f"[red]{error_tasks}[/red]")
+    table.add_row("Faltam", f"[yellow]{remaining_tasks}[/yellow]")
 
-    return Panel(table, title="[bold]Phase 1b — Extraction Progress[/bold]")
+    if active_files:
+        # Mostra os nomes dos arquivos abertos para o usuário saber o que está acontecendo
+        display_files = active_files[:14] # mostra até 14 (o max de workers)
+        active_str = "\n".join([f"[dim]>[/dim] {f[:70]}" for f in display_files])
+        if len(active_files) > 14:
+            active_str += f"\n[dim]... e mais {len(active_files) - 14}[/dim]"
+        table.add_row("Processando Agora", f"[yellow]{active_str}[/yellow]")
+    else:
+        table.add_row("Processando Agora", "[dim]Buscando tarefas...[/dim]")
+
+    return Panel(table, title="[bold]Phase 1b — Extração de Features[/bold]")
 
 def dashboard_loop():
     d = psutil.disk_io_counters()
