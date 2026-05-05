@@ -76,6 +76,18 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         X_train_df["syn_to_total_ratio"] = X_train_df["src2dst_syn_packets"] / train_src_pkts
         X_test_df["syn_to_total_ratio"] = X_test_df["src2dst_syn_packets"] / test_src_pkts
         console.print("[dim]  - Nova feature criada: syn_to_total_ratio (syn_packets / total_src_packets)[/dim]")
+
+    # 5. Discovery Protocol Flag
+    if "protocol" in X_train_df.columns and "dst_port" in X_train_df.columns:
+        # Portas comuns de discovery/broadcast: 1900 (SSDP), 5353 (mDNS), 137/138 (NetBIOS), 67/68 (DHCP)
+        discovery_ports = [1900, 5353, 137, 138, 67, 68]
+        # protocolo 17 é UDP
+        train_is_disc = (X_train_df["protocol"] == 17) & (X_train_df["dst_port"].isin(discovery_ports))
+        test_is_disc = (X_test_df["protocol"] == 17) & (X_test_df["dst_port"].isin(discovery_ports))
+        
+        X_train_df["is_discovery_protocol"] = train_is_disc.astype(float)
+        X_test_df["is_discovery_protocol"] = test_is_disc.astype(float)
+        console.print("[dim]  - Nova feature criada: is_discovery_protocol (True para UDP nas portas 1900, 5353, 137...)[/dim]")
     # ===========================
     
     columns_to_drop = [col for col in excluded_features if col in X_train_df.columns]
@@ -129,10 +141,10 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     metrics_table.add_column("Metric", style="dim", width=20)
     metrics_table.add_column("Score")
     
-    metrics_table.add_row("Accuracy", f"{acc * 100:.2f}%")
-    metrics_table.add_row("Precision", f"{prec * 100:.2f}%")
-    metrics_table.add_row("Recall", f"{rec * 100:.2f}%")
-    metrics_table.add_row("F1-Score", f"{f1 * 100:.2f}%")
+    metrics_table.add_row("Accuracy", f"{acc * 100:.5f}%")
+    metrics_table.add_row("Precision", f"{prec * 100:.5f}%")
+    metrics_table.add_row("Recall", f"{rec * 100:.5f}%")
+    metrics_table.add_row("F1-Score", f"{f1 * 100:.5f}%")
     
     console.print()
     console.print(metrics_table)
@@ -148,9 +160,39 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     
     console.print(cm_table)
 
+    # --- Matriz de Confusão por Protocolo ---
+    console.print()
+    
+    test_protocols = test_df['protocol'].values
+    unique_protos = sorted(list(set(test_protocols)))
+    
+    proto_cm_table = Table(title="Confusion Matrix by Protocol", show_header=True, header_style="bold magenta")
+    proto_cm_table.add_column("Protocol")
+    proto_cm_table.add_column("TN (Benign -> Benign)", style="green")
+    proto_cm_table.add_column("FP (Benign -> Mal)", style="red")
+    proto_cm_table.add_column("FN (Mal -> Benign)", style="yellow")
+    proto_cm_table.add_column("TP (Mal -> Mal)", style="green")
+    
+    for proto in unique_protos:
+        mask = test_protocols == proto
+        y_test_proto = y_test[mask]
+        y_pred_proto = y_pred[mask]
+        
+        if len(y_test_proto) > 0:
+            cm_proto = confusion_matrix(y_test_proto, y_pred_proto, labels=[0, 1])
+            tn, fp, fn, tp = cm_proto.ravel()
+            
+            proto_name = str(int(proto))
+            if proto == 6: proto_name = "6 (TCP)"
+            elif proto == 17: proto_name = "17 (UDP)"
+            elif proto == 1: proto_name = "1 (ICMP)"
+            
+            proto_cm_table.add_row(proto_name, str(tn), str(fp), str(fn), str(tp))
+
+    console.print(proto_cm_table)
     console.print()
     console.print("[bold magenta]Classification Report:[/bold magenta]")
-    console.print(classification_report(y_test, y_pred))
+    console.print(classification_report(y_test, y_pred, digits=5))
 
     # --- Threshold sweep table ---
     console.print()
@@ -172,9 +214,9 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         marker = " ◀ current" if abs(t - threshold) < 0.001 else ""
         sweep_table.add_row(
             f"{t:.2f}{marker}",
-            f"{fp}/{n_benign}  ({fp/n_benign*100:.1f}%)",
-            f"{fn}/{n_malicious}  ({fn/n_malicious*100:.1f}%)",
-            f"{acc_t*100:.1f}%",
+            f"{fp}/{n_benign}  ({fp/n_benign*100:.5f}%)",
+            f"{fn}/{n_malicious}  ({fn/n_malicious*100:.5f}%)",
+            f"{acc_t*100:.5f}%",
         )
 
     console.print(sweep_table)
@@ -201,7 +243,7 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         importance_val = importances[idx]
         feat_name = feature_names[idx]
         
-        feat_table.add_row(f"{i+1}", feat_name, f"{importance_val * 100:.2f}%")
+        feat_table.add_row(f"{i+1}", feat_name, f"{importance_val * 100:.5f}%")
         
     console.print(feat_table)
     
