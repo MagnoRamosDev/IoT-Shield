@@ -6,7 +6,8 @@ import shutil
 from src.extractor import run_extraction
 from src.balancer import run_balancing
 from src.trainer import run_training
-from src.dashboard import start_dashboard, stop_dashboard
+from src.export_to_c import run_export
+from src.dashboard import start_dashboard, stop_dashboard, print_ui
 
 def main():
     parser = argparse.ArgumentParser(description="AI Pipeline for PCAP Random Forest Feature Extraction")
@@ -19,11 +20,9 @@ def main():
     parser.add_argument("--exclude-list", type=str, default="config/excluded_features.txt", help="File listing features to drop before training")
     parser.add_argument("--threshold", type=float, default=0.5,
                         help="Classification threshold (0.0-1.0). Higher = less false positives on benign, but more malicious slips through. Default: 0.5")
-    parser.add_argument("--phase", type=str, choices=["all", "extract", "balance", "train"], default="all", help="Which portion of the pipeline to run")
+    parser.add_argument("--phase", type=str, choices=["all", "extract", "balance", "train", "export"], default="all", help="Which portion of the pipeline to run")
 
     args = parser.parse_args()
-
-    print(f"[+] Starting pipeline with {args.workers} workers and {args.max_ram}MB max RAM.")
 
     # Clean up tmp directory if it exists and recreate it
     if args.phase in ["all", "extract"]:
@@ -32,18 +31,16 @@ def main():
         os.makedirs(args.tmp_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Start dashboard in the background only if not purely training
-    if args.phase != "train":
+    # Start dashboard in the background only if not purely training/exporting
+    if args.phase not in ["train", "export"]:
         start_dashboard()
 
     try:
         # Step 1: Extractor
         if args.phase in ["all", "extract"]:
-            print("\n[+] Phase 1: Feature Extraction")
             # Split Data if required
             working_dataset_list = args.dataset_list
             if args.split_size > 0:
-                print(f"\n[+] Splitting large PCAP files into chunks of {args.split_size} MB using {args.workers} workers...")
                 from src.extractor import split_pcaps_if_needed
                 working_dataset_list = split_pcaps_if_needed(args.dataset_list, args.split_size, args.tmp_dir, args.workers)
 
@@ -56,15 +53,19 @@ def main():
 
         # Step 2: Balancer
         if args.phase in ["all", "balance"]:
-            print("\n[+] Phase 2: Flow Balancing & Splitting")
             run_balancing(
                 tmp_dir=args.tmp_dir,
                 output_dir=args.output_dir
             )
 
+        # Stop dashboard before printing text-heavy phases
+        if args.phase in ["all", "extract", "balance"]:
+            stop_dashboard()
+
         # Step 3: Train Random Forest Model
         if args.phase in ["all", "train"]:
-            print("\n[+] Phase 3: Train Random Forest Model")
+            print_ui(f"\n[bold blue][+] Starting pipeline with {args.workers} workers and {args.max_ram}MB max RAM.[/bold blue]")
+            print_ui("\n[bold cyan][+] Phase 3: Train Random Forest Model[/bold cyan]")
             run_training(
                 train_csv=os.path.join(args.output_dir, "train.csv"),
                 test_csv=os.path.join(args.output_dir, "test.csv"),
@@ -72,19 +73,24 @@ def main():
                 threshold=args.threshold,
             )
 
-        print("\n[+] Pipeline Complete! Deleting temporary binaries...")
+        # Step 4: Export to C
+        if args.phase in ["all", "export"]:
+            run_export(out_dir=args.output_dir)
+
+        print_ui("\n[bold green][+] Pipeline Complete! Deleting temporary binaries...[/bold green]")
     except KeyboardInterrupt:
-        print("\n[!] Pipeline interrupted by user.")
+        stop_dashboard()
+        print_ui("\n[bold red][!] Pipeline interrupted by user.[/bold red]")
     except Exception as e:
-        print(f"\n[!] Pipeline failed: {e}")
+        stop_dashboard()
+        print_ui(f"\n[bold red][!] Pipeline failed: {e}[/bold red]")
         import traceback
         traceback.print_exc()
     finally:
-        if args.phase != "train":
-            stop_dashboard()
+        stop_dashboard()
         if args.phase in ["all", "balance"] and os.path.exists(args.tmp_dir):
             shutil.rmtree(args.tmp_dir)
-        print("[+] Goodbye!")
+        print_ui("[bold green][+] Goodbye![/bold green]")
 
 if __name__ == "__main__":
     main()

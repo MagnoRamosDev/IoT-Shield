@@ -8,10 +8,9 @@ from collections import defaultdict
 def run_balancing(tmp_dir, output_dir):
     chunk_files = sorted(glob.glob(os.path.join(tmp_dir, "*.npy")))
     if not chunk_files:
-        print("[!] No extracted flows found. Exiting balancer.")
         return
 
-    print(f"[*] Found {len(chunk_files)} binary chunks. Scanning frequencies (Pass 1)...")
+    # Pass 1: Global Frequencies
 
     # --- Pass 1: count per (class, protocol) ---
     raw_counts = defaultdict(int)
@@ -30,7 +29,6 @@ def run_balancing(tmp_dir, output_dir):
     valid = {k: v for k, v in raw_counts.items() if v >= MIN_GROUP}
 
     if not valid:
-        print(f"[!] No groups with >= {MIN_GROUP} flows found. Exiting.")
         return
 
     # --- Level 1: balance protocols WITHIN each class ---
@@ -39,11 +37,6 @@ def run_balancing(tmp_dir, output_dir):
     for (cls, proto), count in valid.items():
         by_class[cls][proto] = count
 
-    print("\n[*] Valid groups before balancing:")
-    for cls in sorted(by_class):
-        label = "Malicious" if cls == 1 else "Benign"
-        for proto, cnt in sorted(by_class[cls].items()):
-            print(f"  - {label} / Protocol {proto}: {cnt:,} flows")
 
     # Target per-protocol within each class = min across protocols in that class
     class_proto_target = {}   # cls -> flows_per_protocol
@@ -61,19 +54,13 @@ def run_balancing(tmp_dir, output_dir):
     # Recalculate per-protocol quota for each class so totals match
     # Distribute target_per_class equally across protocols within that class
     quota = {}   # (cls, proto) -> n_flows_to_sample
-    print("\n[*] Final per-group quotas after two-level balancing:")
     for cls, protos in by_class.items():
         n_protos  = class_n_protos[cls]
         per_proto = target_per_class // n_protos   # floor — keep it clean
-        label = "Malicious" if cls == 1 else "Benign"
         for proto in protos:
             quota[(cls, proto)] = per_proto
-            print(f"  - {label} / Protocol {proto}: {per_proto:,} flows "
-                  f"(original: {by_class[cls][proto]:,})")
 
     total_flows = sum(quota.values())
-    print(f"\n[*] Target dataset size: {total_flows:,} flows total "
-          f"({target_per_class:,} benign / {target_per_class:,} malicious)")
 
     # --- Pass 2: probabilistic reservoir sampling into train/test CSVs ---
     train_csv = os.path.join(output_dir, "train.csv")
@@ -108,7 +95,7 @@ def run_balancing(tmp_dir, output_dir):
             'remaining_test':  q - half,
         }
 
-    print("[*] Writing Final Balanced CSVs (Pass 2)...")
+    # Write to final CSVs (Pass 2)
 
     with open(train_csv, "w", newline="") as f_train, open(test_csv, "w", newline="") as f_test:
         w_train = csv.writer(f_train)
@@ -155,8 +142,3 @@ def run_balancing(tmp_dir, output_dir):
 
     train_rows = sum(q // 2       for q in quota.values())
     test_rows  = sum(q - q // 2   for q in quota.values())
-    print(f"[*] Balancing complete! Datasets saved to: {train_csv} and {test_csv}")
-    print(f"  - Train: ~{train_rows:,} rows")
-    print(f"  - Test:  ~{test_rows:,} rows")
-    print(f"  - Each class contributes exactly {target_per_class // class_n_protos.get(0,1):,} "
-          f"flows per protocol per class")

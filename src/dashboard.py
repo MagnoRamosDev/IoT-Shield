@@ -8,10 +8,19 @@ from rich.live import Live
 from rich.table import Table
 from rich.panel import Panel
 from rich.layout import Layout
-from rich.console import Group
+from rich.console import Group, Console
 
 _stop_event = threading.Event()
 _dashboard_thread = None
+
+# Global console para impressões estáticas fora do modo Live
+_console = Console()
+
+def print_ui(msg):
+    _console.print(msg)
+
+def print_table(table):
+    _console.print(table)
 
 # Shared state updated by the main process before/during each phase
 _phase_state = {
@@ -20,6 +29,66 @@ _phase_state = {
     "extract_tasks": [],   # list of (pcap_path, worker_id)
     "extract_tmp_dir": "",
 }
+
+def display_metrics(acc, prec, rec, f1):
+    metrics_table = Table(title="Performance Metrics", show_header=True, header_style="bold magenta")
+    metrics_table.add_column("Metric", style="dim", width=20)
+    metrics_table.add_column("Score")
+    metrics_table.add_row("Accuracy", f"{acc * 100:.5f}%")
+    metrics_table.add_row("Precision", f"{prec * 100:.5f}%")
+    metrics_table.add_row("Recall", f"{rec * 100:.5f}%")
+    metrics_table.add_row("F1-Score", f"{f1 * 100:.5f}%")
+    print_ui("\n")
+    print_table(metrics_table)
+    print_ui("\n")
+
+def display_confusion_matrix(cm):
+    cm_table = Table(title="Confusion Matrix", show_header=True, header_style="bold magenta")
+    cm_table.add_column("Actual \\ Predicted")
+    cm_table.add_column("Class 0 (Benign)")
+    cm_table.add_column("Class 1 (Malicious)")
+    cm_table.add_row("Class 0 (Benign)", str(cm[0][0]), str(cm[0][1]))
+    cm_table.add_row("Class 1 (Malicious)", str(cm[1][0]), str(cm[1][1]))
+    print_table(cm_table)
+    print_ui("\n")
+
+def display_protocol_confusion_matrix(proto_rows):
+    proto_cm_table = Table(title="Confusion Matrix by Protocol", show_header=True, header_style="bold magenta")
+    proto_cm_table.add_column("Protocol")
+    proto_cm_table.add_column("TN (Benign -> Benign)", style="green")
+    proto_cm_table.add_column("FP (Benign -> Mal)", style="red")
+    proto_cm_table.add_column("FN (Mal -> Benign)", style="yellow")
+    proto_cm_table.add_column("TP (Mal -> Mal)", style="green")
+    for row in proto_rows:
+        proto_cm_table.add_row(*row)
+    print_table(proto_cm_table)
+    print_ui("\n")
+
+def display_threshold_sweep(sweep_rows, threshold):
+    print_ui("[bold cyan][*] Threshold Sweep — tradeoff overview:[/bold cyan]")
+    sweep_table = Table(show_header=True, header_style="bold yellow")
+    sweep_table.add_column("Threshold",                      justify="center", style="cyan",   min_width=12)
+    sweep_table.add_column("Benign Blocked (FP)",            justify="center", style="red",    min_width=20)
+    sweep_table.add_column("Malicious Passed (FN)",          justify="center", style="yellow", min_width=22)
+    sweep_table.add_column("Accuracy",                       justify="center", style="green",  min_width=10)
+    
+    for row in sweep_rows:
+        sweep_table.add_row(*row)
+        
+    print_table(sweep_table)
+    print_ui(
+        "[dim]Tip: use [bold]--threshold 0.6[/bold] to block only high-confidence malicious flows,[/dim]\n"
+        "[dim]     reducing benign false-positives at the cost of passing more malicious traffic.[/dim]\n"
+    )
+
+def display_feature_importance(feat_rows):
+    feat_table = Table(title="Random Forest Feature Importance (MDI)", show_header=True, header_style="bold yellow")
+    feat_table.add_column("Rank", justify="right", style="cyan", no_wrap=True)
+    feat_table.add_column("Feature Name", style="magenta")
+    feat_table.add_column("Importance (% of Tree Splits)", style="green")
+    for row in feat_rows:
+        feat_table.add_row(*row)
+    print_table(feat_table)
 
 def set_split_phase(tasks_info, splits_dir, max_bytes):
     """

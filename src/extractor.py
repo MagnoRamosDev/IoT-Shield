@@ -406,9 +406,6 @@ def split_pcap_task(args):
             f_in.close()
             
         except Exception as e:
-            import traceback
-            print(f"Error splitting {pcap}: {e}")
-            traceback.print_exc()
             new_mapping.append(f"{pcap} {mal_ip}\n") # fallback to original
             
     return new_mapping
@@ -448,7 +445,6 @@ def split_pcaps_if_needed(dataset_list_path, mb_size, tmp_dir, workers=4):
             # 1 hour max timeout — prevents deadlock if a worker dies silently
             results = async_result.get(timeout=3600)
         except multiprocessing.TimeoutError:
-            print("[!] Split phase timed out. Some files may not have been split.")
             results = []
             pool.terminate()
         
@@ -505,5 +501,4 @@ def run_extraction(dataset_list_path, workers, max_ram_mb, tmp_dir):
             # 24 hour max timeout — prevents deadlock if a worker dies silently
             async_result.get(timeout=86400)
         except multiprocessing.TimeoutError:
-            print("[!] Extraction phase timed out.")
             pool.terminate()
