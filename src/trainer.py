@@ -33,9 +33,6 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     train_df = pd.read_csv(train_csv)
     test_df = pd.read_csv(test_csv)
     
-    # We must unconditionally drop is_malicious from features, and assign to y!
-    # And we also drop any columns the user mandated
-    
     # Separate label
     y_train = train_df['is_malicious'].values
     y_test = test_df['is_malicious'].values
@@ -49,16 +46,16 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     if "src2dst_stddev_ps" in X_train_df.columns:
         X_train_df["is_constant_payload"] = (X_train_df["src2dst_stddev_ps"] < 1.0).astype(float)
         X_test_df["is_constant_payload"] = (X_test_df["src2dst_stddev_ps"] < 1.0).astype(float)
-        print_ui("[dim]  - Nova feature criada: is_constant_payload (1 se stddev < 1.0)[/dim]")
+        print_ui("[dim]  - New feature created: is_constant_payload (1 if stddev < 1.0)[/dim]")
 
     # 2. Flow Rate (flows per sec) to handle NAT safely with Clipping
     if "src2dst_concurrent_flows" in X_train_df.columns and "bidirectional_duration_ms" in X_train_df.columns:
         train_dur_sec = X_train_df["bidirectional_duration_ms"].replace(0, 1.0) / 1000.0
         test_dur_sec = X_test_df["bidirectional_duration_ms"].replace(0, 1.0) / 1000.0
-        # Calcula a taxa (fluxos por segundo) e aplica saturação para evitar domínio de outliers absurdos
+        # Calculate the rate (flows per second) and apply clipping to prevent dominance of extreme outliers
         X_train_df["src2dst_flow_rate"] = (X_train_df["src2dst_concurrent_flows"] / train_dur_sec).clip(upper=2000)
         X_test_df["src2dst_flow_rate"] = (X_test_df["src2dst_concurrent_flows"] / test_dur_sec).clip(upper=2000)
-        print_ui("[dim]  - Nova feature criada: src2dst_flow_rate (fluxos por seg, limite max=1000)[/dim]")
+        print_ui("[dim]  - New feature created: src2dst_flow_rate (flows per sec, max limit=1000)[/dim]")
 
     # 3. Asymmetry (In/Out Ratio)
     if "src2dst_packets" in X_train_df.columns and "dst2src_packets" in X_train_df.columns:
@@ -66,7 +63,7 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         test_dst_pkts = X_test_df["dst2src_packets"].replace(0, 1.0)
         X_train_df["in_out_packet_ratio"] = (X_train_df["src2dst_packets"] / train_dst_pkts).clip(upper=100)
         X_test_df["in_out_packet_ratio"] = (X_test_df["src2dst_packets"] / test_dst_pkts).clip(upper=100)
-        print_ui("[dim]  - Nova feature criada: in_out_packet_ratio (src2dst_packets / dst2src_packets)[/dim]")
+        print_ui("[dim]  - New feature created: in_out_packet_ratio (src2dst_packets / dst2src_packets)[/dim]")
 
     # 4. Incomplete Handshake Ratio (SYN packets / Total Packets)
     if "src2dst_syn_packets" in X_train_df.columns and "src2dst_packets" in X_train_df.columns:
@@ -74,19 +71,19 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         test_src_pkts = X_test_df["src2dst_packets"].replace(0, 1.0)
         X_train_df["syn_to_total_ratio"] = X_train_df["src2dst_syn_packets"] / train_src_pkts
         X_test_df["syn_to_total_ratio"] = X_test_df["src2dst_syn_packets"] / test_src_pkts
-        print_ui("[dim]  - Nova feature criada: syn_to_total_ratio (syn_packets / total_src_packets)[/dim]")
+        print_ui("[dim]  - New feature created: syn_to_total_ratio (syn_packets / total_src_packets)[/dim]")
 
     # 5. Discovery Protocol Flag
     if "protocol" in X_train_df.columns and "dst_port" in X_train_df.columns:
-        # Portas comuns de discovery/broadcast: 1900 (SSDP), 5353 (mDNS), 137/138 (NetBIOS), 67/68 (DHCP)
+        # Common discovery/broadcast ports: 1900 (SSDP), 5353 (mDNS), 137/138 (NetBIOS), 67/68 (DHCP)
         discovery_ports = [1900, 5353, 137, 138, 67, 68]
-        # protocolo 17 é UDP
+        # protocol 17 is UDP
         train_is_disc = (X_train_df["protocol"] == 17) & (X_train_df["dst_port"].isin(discovery_ports))
         test_is_disc = (X_test_df["protocol"] == 17) & (X_test_df["dst_port"].isin(discovery_ports))
         
         X_train_df["is_discovery_protocol"] = train_is_disc.astype(float)
         X_test_df["is_discovery_protocol"] = test_is_disc.astype(float)
-        print_ui("[dim]  - Nova feature criada: is_discovery_protocol (True para UDP nas portas 1900, 5353, 137...)[/dim]")
+        print_ui("[dim]  - New feature created: is_discovery_protocol (True for UDP on ports 1900, 5353, 137...)[/dim]")
     # ===========================
     
     columns_to_drop = [col for col in excluded_features if col in X_train_df.columns]
@@ -96,13 +93,13 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
         X_train_df.drop(columns=columns_to_drop, inplace=True)
         X_test_df.drop(columns=columns_to_drop, inplace=True)
         
-    # Saturação (Clipping) para forçar o modelo a aprender com as outras features
+    # Clipping to force the model to learn from other features
     concurrent_features = ["src2dst_concurrent_flows", "dst2src_concurrent_flows", "bidirectional_concurrent_flows"]
     for col in concurrent_features:
         if col in X_train_df.columns:
             X_train_df[col] = X_train_df[col].clip(upper=10)
             X_test_df[col] = X_test_df[col].clip(upper=10)
-            print_ui(f"[dim]  - Saturação (Clipping) aplicada em {col} (limite máximo = 10)[/dim]")
+            print_ui(f"[dim]  - Clipping applied to {col} (max limit = 10)[/dim]")
 
     feature_names = X_train_df.columns.tolist()
     X_train = X_train_df.values
@@ -113,8 +110,6 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     
     print_ui("[bold cyan][*] Training Random Forest model (with depth pruning)...[/bold cyan]")
     
-    # Para testar a redução de feature dominance por Subsampling, comente a linha abaixo e descomente a seguinte:
-    #rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=5, random_state=52, n_jobs=-1)
     rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=5, random_state=52, n_jobs=-1, max_features=2)
     
     rf.fit(X_train, y_train)
@@ -141,7 +136,7 @@ def run_training(train_csv, test_csv, exclude_file, threshold=0.5):
     cm = confusion_matrix(y_test, y_pred)
     display_confusion_matrix(cm)
 
-    # --- Matriz de Confusão por Protocolo ---
+    # --- Protocol Confusion Matrix ---
     
     test_protocols = test_df['protocol'].values
     unique_protos = sorted(list(set(test_protocols)))

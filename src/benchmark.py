@@ -213,8 +213,8 @@ if os.path.exists(npy_path):
         e2e_speedup = time_e2e_py / time_e2e_c
         emu_speedup = time_e2e_py / time_e2e_emu
         
-        # Contagem de pacotes com tcpdump para a tabela
-        pkt_count = 50000 # tcpdump extraiu 50k
+        # Packet count with tcpdump for the table
+        pkt_count = 50000 # tcpdump extracted 50k
         py_e2e_tps = pkt_count / time_e2e_py
         c_e2e_tps = pkt_count / time_e2e_c
         emu_e2e_tps = pkt_count / time_e2e_emu
@@ -232,8 +232,8 @@ if os.path.exists(npy_path):
         e2e_table.add_column("Speedup", justify="right", style="magenta")
         
         e2e_table.add_row("Python (Scapy+ML)", f"{py_e2e_lat:.2f} µs", cpu_py, f"{ram_py:.1f} MB", f"{py_e2e_tps:,.0f}", "1.00x")
-        e2e_table.add_row("C Firmware (Nativo)", f"{c_e2e_lat:.2f} µs", cpu_c, f"{ram_c:.1f} MB", f"{c_e2e_tps:,.0f}", f"{e2e_speedup:.2f}x")
-        e2e_table.add_row("C Emulado (1GHz/128MB)", f"{emu_e2e_lat:.2f} µs", cpu_emu, f"{ram_emu:.1f} MB", f"{emu_e2e_tps:,.0f}", f"{emu_speedup:.2f}x")
+        e2e_table.add_row("C Firmware (Native)", f"{c_e2e_lat:.2f} µs", cpu_c, f"{ram_c:.1f} MB", f"{c_e2e_tps:,.0f}", f"{e2e_speedup:.2f}x")
+        e2e_table.add_row("C Emulated (1GHz/128MB)", f"{emu_e2e_lat:.2f} µs", cpu_emu, f"{ram_emu:.1f} MB", f"{emu_e2e_tps:,.0f}", f"{emu_speedup:.2f}x")
         
         print_ui("\n")
         print_table(e2e_table)

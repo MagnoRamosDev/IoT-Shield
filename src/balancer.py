@@ -84,15 +84,15 @@ def run_balancing(tmp_dir, output_dir):
     ]
 
     # Sampling state per (cls, proto):
-    # split quota 50/50 between train and test
+    # split quota 80/20 between train and test
     sampling_state = {}
     for key, q in quota.items():
-        half = q // 2
+        train_quota = int(q * 0.8)
         total_raw = valid[key]
         sampling_state[key] = {
             'remaining_view':  total_raw,
-            'remaining_train': half,
-            'remaining_test':  q - half,
+            'remaining_train': train_quota,
+            'remaining_test':  q - train_quota,
         }
 
     # Write to final CSVs (Pass 2)
@@ -140,5 +140,5 @@ def run_balancing(tmp_dir, output_dir):
 
                 state['remaining_view'] -= 1
 
-    train_rows = sum(q // 2       for q in quota.values())
-    test_rows  = sum(q - q // 2   for q in quota.values())
+    train_rows = sum(int(q * 0.8)       for q in quota.values())
+    test_rows  = sum(q - int(q * 0.8)   for q in quota.values())

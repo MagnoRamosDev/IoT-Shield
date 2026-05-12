@@ -13,7 +13,7 @@ from rich.console import Group, Console
 _stop_event = threading.Event()
 _dashboard_thread = None
 
-# Global console para impressões estáticas fora do modo Live
+# Global console for static prints outside Live mode
 _console = Console()
 
 def print_ui(msg):
@@ -200,7 +200,7 @@ def _make_extract_table():
     if not tasks or not tmp_dir:
         return None
 
-    # Descobre quais arquivos estão ativamente abertos na memória
+    # Discovers which files are actively open in memory
     active_files = []
     for p in _get_pipeline_procs():
         try:
@@ -223,23 +223,23 @@ def _make_extract_table():
     error_tasks = len(glob.glob(os.path.join(tmp_dir, "*.err")))
     remaining_tasks = total_tasks - completed_tasks - error_tasks
 
-    table.add_row("Total de Splits na Fila", str(total_tasks))
-    table.add_row("Finalizados", f"[green]{completed_tasks}[/green]")
+    table.add_row("Total Splits in Queue", str(total_tasks))
+    table.add_row("Finished", f"[green]{completed_tasks}[/green]")
     if error_tasks > 0:
-        table.add_row("Com Erro", f"[red]{error_tasks}[/red]")
-    table.add_row("Faltam", f"[yellow]{remaining_tasks}[/yellow]")
+        table.add_row("With Error", f"[red]{error_tasks}[/red]")
+    table.add_row("Remaining", f"[yellow]{remaining_tasks}[/yellow]")
 
     if active_files:
-        # Mostra os nomes dos arquivos abertos para o usuário saber o que está acontecendo
-        display_files = active_files[:14] # mostra até 14 (o max de workers)
+        # Shows open file names so the user knows what's happening
+        display_files = active_files[:14] # show up to 14
         active_str = "\n".join([f"[dim]>[/dim] {f[:70]}" for f in display_files])
         if len(active_files) > 14:
-            active_str += f"\n[dim]... e mais {len(active_files) - 14}[/dim]"
-        table.add_row("Processando Agora", f"[yellow]{active_str}[/yellow]")
+            active_str += f"\n[dim]... and {len(active_files) - 14} more[/dim]"
+        table.add_row("Processing Now", f"[yellow]{active_str}[/yellow]")
     else:
-        table.add_row("Processando Agora", "[dim]Buscando tarefas...[/dim]")
+        table.add_row("Processing Now", "[dim]Fetching tasks...[/dim]")
 
-    return Panel(table, title="[bold]Phase 1b — Extração de Features[/bold]")
+    return Panel(table, title="[bold]Phase 1b — Feature Extraction[/bold]")
 
 def dashboard_loop():
     d = psutil.disk_io_counters()

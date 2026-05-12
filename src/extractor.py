@@ -323,11 +323,11 @@ def pcap_worker_task(args):
             if buffer_idx > 0:
                 np.save(os.path.join(tmp_dir, f"w{worker_id}_c{chunk_counter}.npy"), buffer[:buffer_idx])
                 
-        # Marker para o dashboard
+        # Marker for the dashboard
         open(os.path.join(tmp_dir, f"w{worker_id}.done"), "w").close()
                 
     except Exception:
-        # Marker de erro para o dashboard
+        # Error marker for the dashboard
         open(os.path.join(tmp_dir, f"w{worker_id}.err"), "w").close()
 
 def split_pcap_task(args):
