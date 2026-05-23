@@ -5,7 +5,7 @@ import random
 import csv
 from collections import defaultdict
 
-def run_balancing(tmp_dir, output_dir):
+def run_balancing(tmp_dir, output_dir, folds=5):
     chunk_files = sorted(glob.glob(os.path.join(tmp_dir, "*.npy")))
     if not chunk_files:
         return
@@ -60,11 +60,8 @@ def run_balancing(tmp_dir, output_dir):
         for proto in protos:
             quota[(cls, proto)] = per_proto
 
-    total_flows = sum(quota.values())
-
-    # --- Pass 2: probabilistic reservoir sampling into train/test CSVs ---
-    train_csv = os.path.join(output_dir, "train.csv")
-    test_csv  = os.path.join(output_dir, "test.csv")
+    # --- Pass 2: probabilistic reservoir sampling into fold CSVs ---
+    fold_csvs = [os.path.join(output_dir, f"fold_{i}.csv") for i in range(1, folds + 1)]
 
     csv_header = [
         "src_port", "dst_port", "protocol",
@@ -84,25 +81,26 @@ def run_balancing(tmp_dir, output_dir):
     ]
 
     # Sampling state per (cls, proto):
-    # split quota 80/20 between train and test
+    # split quota into folds
     sampling_state = {}
     for key, q in quota.items():
-        train_quota = int(q * 0.8)
         total_raw = valid[key]
+        base = q // folds
+        rem = q % folds
+        fold_quotas = [base + (1 if i < rem else 0) for i in range(folds)]
+        
         sampling_state[key] = {
-            'remaining_view':  total_raw,
-            'remaining_train': train_quota,
-            'remaining_test':  q - train_quota,
+            'remaining_view': total_raw,
+            'remaining_folds': fold_quotas,
         }
 
     # Write to final CSVs (Pass 2)
+    files = [open(f, "w", newline="") for f in fold_csvs]
+    writers = [csv.writer(f) for f in files]
+    for w in writers:
+        w.writerow(csv_header)
 
-    with open(train_csv, "w", newline="") as f_train, open(test_csv, "w", newline="") as f_test:
-        w_train = csv.writer(f_train)
-        w_test  = csv.writer(f_test)
-        w_train.writerow(csv_header)
-        w_test.writerow(csv_header)
-
+    try:
         for fpath in chunk_files:
             try:
                 chunk = np.load(fpath)
@@ -119,26 +117,27 @@ def run_balancing(tmp_dir, output_dir):
 
                 state = sampling_state[key]
                 rv  = state['remaining_view']
-                rt  = state['remaining_train']
-                rts = state['remaining_test']
 
                 if rv <= 0:
                     continue
 
-                total_pick = rt + rts
-                if total_pick > 0:
-                    r = random.random()
-                    prob_train = rt / rv
-                    prob_pick  = prob_train + rts / rv
+                r = random.random()
+                cumulative_prob = 0.0
+                chosen_fold = -1
+                
+                for i in range(folds):
+                    if state['remaining_folds'][i] > 0:
+                        prob = state['remaining_folds'][i] / rv
+                        cumulative_prob += prob
+                        if r < cumulative_prob:
+                            chosen_fold = i
+                            break
 
-                    if r < prob_train:
-                        w_train.writerow(chunk[row_idx])
-                        state['remaining_train'] -= 1
-                    elif r < prob_pick:
-                        w_test.writerow(chunk[row_idx])
-                        state['remaining_test'] -= 1
+                if chosen_fold != -1:
+                    writers[chosen_fold].writerow(chunk[row_idx])
+                    state['remaining_folds'][chosen_fold] -= 1
 
                 state['remaining_view'] -= 1
-
-    train_rows = sum(int(q * 0.8)       for q in quota.values())
-    test_rows  = sum(q - int(q * 0.8)   for q in quota.values())
+    finally:
+        for f in files:
+            f.close()

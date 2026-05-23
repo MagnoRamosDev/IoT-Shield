@@ -20,6 +20,7 @@ def main():
     parser.add_argument("--exclude-list", type=str, default="config/excluded_features.txt", help="File listing features to drop before training")
     parser.add_argument("--threshold", type=float, default=0.5,
                         help="Classification threshold (0.0-1.0). Higher = less false positives on benign, but more malicious slips through. Default: 0.5")
+    parser.add_argument("--folds", type=int, default=5, help="Number of folds for cross-validation")
     parser.add_argument("--phase", type=str, choices=["all", "extract", "balance", "train", "export"], default="all", help="Which portion of the pipeline to run")
 
     args = parser.parse_args()
@@ -55,7 +56,8 @@ def main():
         if args.phase in ["all", "balance"]:
             run_balancing(
                 tmp_dir=args.tmp_dir,
-                output_dir=args.output_dir
+                output_dir=args.output_dir,
+                folds=args.folds
             )
 
         # Stop dashboard before printing text-heavy phases
@@ -65,12 +67,12 @@ def main():
         # Step 3: Train Random Forest Model
         if args.phase in ["all", "train"]:
             print_ui(f"\n[bold blue][+] Starting pipeline with {args.workers} workers and {args.max_ram}MB max RAM.[/bold blue]")
-            print_ui("\n[bold cyan][+] Phase 3: Train Random Forest Model[/bold cyan]")
+            print_ui("\n[bold cyan][+] Phase 3: Train Random Forest Model (Cross-Validation)[/bold cyan]")
             run_training(
-                train_csv=os.path.join(args.output_dir, "train.csv"),
-                test_csv=os.path.join(args.output_dir, "test.csv"),
+                output_dir=args.output_dir,
                 exclude_file=args.exclude_list,
                 threshold=args.threshold,
+                folds=args.folds
             )
 
         # Step 4: Export to C

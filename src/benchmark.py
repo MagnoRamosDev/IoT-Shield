@@ -12,9 +12,11 @@ def run_benchmark(out_dir="results", samples=10000):
     c_path = os.path.join(out_dir, "iot_shield_model.c")
     so_path = os.path.join(out_dir, "iot_shield_model.so")
     test_csv = os.path.join(out_dir, "test.csv")
-    
+    if not os.path.exists(test_csv):
+        test_csv = os.path.join(out_dir, "fold_1.csv")
+        
     if not os.path.exists(model_path) or not os.path.exists(c_path) or not os.path.exists(test_csv):
-        print_ui("[bold red][!] Benchmark requires trained model, C code, and test.csv.[/bold red]")
+        print_ui(f"[bold red][!] Benchmark requires trained model, C code, and data file ({test_csv}).[/bold red]")
         return
         
     print_ui("[bold cyan][*] Compiling C model to shared library for benchmarking...[/bold cyan]")
@@ -180,7 +182,7 @@ void benchmark_batch(double * inputs, double * outputs, int n_samples, int n_fea
             f.write(f"""
 import os, joblib, numpy as np, pandas as pd
 from src.extractor import pcap_worker_task
-pcap_worker_task(('{bench_pcap}', '0.0.0.0', 999, 50000, 10000, '{out_dir}'))
+pcap_worker_task(('{bench_pcap}', '0.0.0.0', 999, 1000000, 10000, '{out_dir}'))
 npy_path = os.path.join('{out_dir}', 'part_999_0.npy')
 if os.path.exists(npy_path):
     py_flows = np.load(npy_path)
@@ -193,8 +195,17 @@ if os.path.exists(npy_path):
         # 2. Benchmark Python End-to-End
         time_e2e_py, cpu_py, ram_py = run_with_time(["./venv/bin/python", py_e2e_path])
         
-        # 3. Benchmark C End-to-End
+        # 3. Compile and Benchmark C End-to-End
+        c_sniffer_src = os.path.join(out_dir, "iot_shield_sniffer.c")
+        c_model_src = os.path.join(out_dir, "iot_shield_model.c")
         c_sniffer = os.path.join(out_dir, "iot_shield_sniffer")
+        
+        print_ui("[bold cyan][*] Compiling C Sniffer...[/bold cyan]")
+        compile_cmd = f"gcc -O3 {c_sniffer_src} {c_model_src} -lpcap -lm -I {out_dir} -o {c_sniffer}"
+        if os.system(compile_cmd) != 0:
+            print_ui("[bold red][!] Failed to compile C sniffer.[/bold red]")
+            return
+            
         time_e2e_c, cpu_c, ram_c = run_with_time([c_sniffer, bench_pcap])
         
         # 4. Benchmark C Emulated OpenWRT Router (1GHz, 128MB)
@@ -214,7 +225,7 @@ if os.path.exists(npy_path):
         emu_speedup = time_e2e_py / time_e2e_emu
         
         # Packet count with tcpdump for the table
-        pkt_count = 50000 # tcpdump extracted 50k
+        pkt_count = 1000000 # tcpdump extracted 1M
         py_e2e_tps = pkt_count / time_e2e_py
         c_e2e_tps = pkt_count / time_e2e_c
         emu_e2e_tps = pkt_count / time_e2e_emu
