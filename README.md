@@ -71,6 +71,3 @@ IoT-Shield/
     ├── iot_shield_sniffer.c     # Sniffer Nativo para Gateway (Pcap)
     └── iot_shield_sniffer       # Binário Mágico!
 ```
-
----
-*Pesquisa arquitetada para provar que dispositivos pequenos e fracos também conseguem ter proteções ativas e inteligentes.*
