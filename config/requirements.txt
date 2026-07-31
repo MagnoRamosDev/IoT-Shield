@@ -4,3 +4,4 @@ rich>=13.7.1
 numpy>=1.26.4
 pandas>=2.2.1
 scikit-learn>=1.4.1
+m2cgen>=0.10.0

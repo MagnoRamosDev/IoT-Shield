@@ -16,6 +16,7 @@ Antes de rodar a IA, você precisa fornecer o tráfego que ela vai estudar e rot
      ```
 3. Configure a lista de classes editando o arquivo **`config/excluded_features.txt`** caso queira que a IA ignore atributos irrelevantes que possam causar viés (como endereços IP diretos, portas específicas ou MAC address).
    - **Nota:** Por padrão, as features que já vieram excluídas nesse arquivo foram cuidadosamente removidas pensando no treinamento contra vírus do tipo **Botnets** (Mirai, Bashlite, etc), forçando a IA a focar no comportamento do fluxo (Flow Rate, P.I.A.T) em vez de focar nos endereços. Se o seu objetivo for treinar a IA para descobrir outro tipo de ataque, sinta-se livre para escolher suas próprias features!
+
 ---
 
 ## 🚀 2. O Pipeline de Treinamento
@@ -23,49 +24,61 @@ Antes de rodar a IA, você precisa fornecer o tráfego que ela vai estudar e rot
 O projeto foi dividido em Fases para que a RAM da sua máquina não estoure. Todo o controle é feito via `./scripts/run.sh`.
 
 ### Fase 1: Extração (Extraction)
-Esta fase pega os arquivos gigantes de Wireshark (`.pcap`), lê os cabeçalhos Ethernet/IP/TCP/UDP com a biblioteca Scapy e transforma o tráfego de rede em matrizes numéricas (Features).
+Esta fase pega os arquivos gigantes de Wireshark (`.pcap`), lê os cabeçalhos Ethernet/IP/TCP/UDP com a biblioteca `dpkt` e transforma o tráfego de rede em matrizes numéricas (Features).
 
 **Comando:**
 ```bash
 ./scripts/run.sh --phase extract --max-ram 14000 --workers 14 --split-size 500
+
 ```
-- `--max-ram`: Limita o consumo de memória RAM (Ex: 14000 = 14GB).
-- `--workers`: Quantos núcleos do processador serão usados em paralelo para ler os PCAPs.
-- `--split-size`: Tamanho em MB para dividir arquivos gigantes e evitar travamentos.
+
+* `--max-ram`: Limita o consumo de memória RAM (Ex: 14000 = 14GB).
+* `--workers`: Quantos núcleos do processador serão usados em paralelo para ler os PCAPs.
+* `--split-size`: Tamanho em MB para dividir arquivos gigantes e evitar travamentos.
 
 **Resultado:** Serão gerados arquivos binários temporários `.npy` otimizados contendo os fluxos brutos.
 
 ### Fase 2: Balanceamento (Balancing)
-Geralmente temos 90% de tráfego benigno e 10% de vírus (ou vice-versa). Se a IA for treinada assim, ela ficará viciada. Esta fase equaliza matematicamente o peso das classes (Undersampling/SMOTE) para garantir aprendizado justo.
+
+Geralmente temos 90% de tráfego benigno e 10% de vírus (ou vice-versa). Se a IA for treinada assim, ela ficará viciada. Esta fase equaliza matematicamente o peso das classes (Undersampling por Amostragem Probabilística) para garantir aprendizado justo.
 
 **Comando:**
+
 ```bash
 ./scripts/run.sh --phase balance
+
 ```
 
-**Resultado:** É gerado o arquivo `results/balanced_dataset.csv` e `results/test.csv`.
+**Resultado:** Serão gerados os arquivos `results/fold_X.csv` contendo as dobras balanceadas.
 
 ### Fase 3: Treinamento (Training)
-Aqui a mágica acontece. O algoritmo de **Random Forest** (Árvore de Decisão) será alimentado com os dados balanceados. 
+
+Aqui a mágica acontece. O algoritmo de **Random Forest** (Árvore de Decisão) será alimentado com os dados balanceados usando Validação Cruzada (Cross-Validation).
 
 **Comando:**
+
 ```bash
-./scripts/run.sh --phase train --threshold 0.6
+./scripts/run.sh --phase train --threshold 0.6 --folds 5
+
 ```
-- `--threshold`: (0.0 a 1.0) Ajusta o rigor da detecção. `0.6` significa que a IA só alertará vírus se tiver mais de 60% de certeza absoluta, reduzindo Falsos Positivos.
 
-**Resultado:**
-Ao final do treinamento, o Dashboard vai renderizar tabelas maravilhosas na tela contendo:
-- A Acurácia da IA e o _Classification Report_.
-- A Matriz de Confusão (Acertos vs Erros Reais).
-- A **Feature Importance**: O Ranking matemático revelando quais atributos a IA mais usou para descobrir que era vírus (Ex: `syn_to_total_ratio`, `is_constant_payload`).
+**Parâmetros Extras (Avançados):**
 
-O modelo inteligente é salvo no arquivo congelado e imutável em: `results/rf_model.pkl`.
+* `--threshold`: (0.0 a 1.0) Ajusta o rigor da detecção. `0.6` significa que a IA só alertará vírus se tiver mais de 60% de certeza absoluta, reduzindo Falsos Positivos.
+* `--folds`: Define quantas dobras terá a Validação Cruzada (Padrão: 5).
+* `--exclude-list`: Caminho opcional para passar um arquivo customizado de regras (Ex: `config/minhas_regras.txt`).
+* `--dataset-list`: Caminho opcional para processar uma lista customizada de PCAPs.
+
+**Resultados Gerados na Pasta `results/`:**
+Além das tabelas maravilhosas no Dashboard, o sistema vai gerar os seguintes arquivos cruciais:
+
+* **`rf_model.pkl`**: O modelo inteligente treinado e congelado em disco.
+* **`feature_names.txt`**: A ordem exata das colunas (features) que o modelo utiliza.
+* **`misclassified.csv`** *(Muito Importante)*: Uma tabela exportada automaticamente contendo **todos os fluxos exatos que enganaram a IA** durante o teste. Excelente para Análise Forense e calibração fina.
+* **`correctly_classified.csv`**: A listagem de fluxos nos quais a IA acertou.
 
 ---
 
 ## 🛠️ O que fazer em caso de erro?
-- **Deadlock de Memória:** Caso a _Fase 1_ congele, reduza o número de `--workers` (escolha dependendo da quantidade de núcleos do seu processador, por ex: se tiver 4 núcleos, use 3 ou 2 para deixar 1 ou 2 livres) e reduza `--split-size` para 200.
-- Caso precise rodar todas as 3 fases de uma só vez de forma sequencial (Demorado), você pode encadear os comandos usando o Linux (`&&`).
 
 👉 Após treinar sua IA (Fase 3), siga para o manual **[2_USANDO_FIRMWARE_C.md](2_USANDO_FIRMWARE_C.md)** para converter sua IA para Hardware nativo!

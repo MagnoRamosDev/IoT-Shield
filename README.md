@@ -17,6 +17,22 @@ O **IoT-Shield** moderniza essa defesa! Treinamos um algoritmo *Random Forest* (
 
 ---
 
+## ⚙️ Instalação e Setup
+
+Antes de iniciar qualquer treinamento, é obrigatório preparar o ecossistema isolado do Python.
+
+```bash
+# 1. Clone o repositório
+git clone [https://github.com/SEU_USUARIO/IoT-Shield.git](https://github.com/SEU_USUARIO/IoT-Shield.git)
+cd IoT-Shield
+
+# 2. Rode o script de instalação (Cria o venv e instala as dependências)
+bash scripts/setup.sh
+
+```
+
+---
+
 ## 📚 Documentação e Manuais Oficiais
 
 Para aprender a operar todas as etapas (da Extração bruta de `.pcap` à Compilação final em C), consulte os manuais detalhados na pasta `docs/`:
@@ -28,7 +44,7 @@ Para aprender a operar todas as etapas (da Extração bruta de `.pcap` à Compil
 
 ## 🚀 Interface do Usuário (Pipeline Modular)
 
-A arquitetura do IoT-Shield foca em isolamento. As fases pesadas em processamento e memória jamais congelam o sistema graças a quebra de contexto. Para gerenciar tudo, use o orquestrador `./scripts/run.sh`.
+A arquitetura do IoT-Shield foca em isolamento. As fases pesadas em processamento e memória evitam congelar o sistema. Para gerenciar tudo, use o orquestrador `./scripts/run.sh`.
 
 ```bash
 # Fase 1: Converter tráfego .pcap em matrizes numéricas (Features)
@@ -38,15 +54,16 @@ A arquitetura do IoT-Shield foca em isolamento. As fases pesadas em processament
 ./scripts/run.sh --phase balance
 
 # Fase 3: Treinar o cérebro (Random Forest ML)
-./scripts/run.sh --phase train --threshold 0.6
+./scripts/run.sh --phase train --threshold 0.6 --folds 5
 
-# Fase 4: Exportar para o Roteador, fazer Benchmarks End-to-End e gerar Binário
+# Fase 4: Exportar para C, Benchmark End-to-End e gerar Binário
 ./scripts/run.sh --phase export
+
 ```
 
 ## 📊 Estrutura de Diretórios
 
-```
+```text
 IoT-Shield/
 ├── README.md                    # Documentação principal
 ├── docs/                        # Guias e tutoriais passo-a-passo
@@ -57,17 +74,19 @@ IoT-Shield/
 │   └── pcaps/                   # Arquivos brutos de tráfego (Ex: Wireshark)
 ├── src/                         
 │   ├── pipeline.py              # Centralizador de chamadas
-│   ├── extractor.py             # Leitor de PCAPs via Scapy (Multipackage)
-│   ├── balancer.py              # Processamento de Dados via Pandas
+│   ├── extractor.py             # Leitor de PCAPs via dpkt (Multipackage)
+│   ├── balancer.py              # Processamento de Dados via Amostragem
 │   ├── trainer.py               # Motor de ML da Inteligência (Scikit)
 │   ├── export_to_c.py           # Transpilador TinyML (m2cgen)
 │   ├── dashboard.py             # Renderizador UI (Biblioteca Rich)
-│   └── benchmark.py             # Módulo Avaliador C vs Python
+│   ├── benchmark.py             # Módulo Avaliador C vs Python
+│   └── iot_shield_sniffer.c     # Sniffer Nativo em C (Código Fonte)
 ├── scripts/                     
+│   ├── setup.sh                 # Construtor do ecossistema e dependências
 │   └── run.sh                   # Orquestrador Bash / Parametrizador
 └── results/                     # Resultados finais gerados pelo sistema
     ├── rf_model.pkl             # IA congelada
     ├── iot_shield_model.c       # IA Transpilada para C
-    ├── iot_shield_sniffer.c     # Sniffer Nativo para Gateway (Pcap)
-    └── iot_shield_sniffer       # Binário Mágico!
+    ├── iot_shield_sniffer.c     # Cópia do Sniffer exportada para compilação
+    └── iot_shield_sniffer       # Binário Executável Nativo
 ```
