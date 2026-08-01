@@ -28,7 +28,7 @@ A Fase 4 do pipeline se encarrega de aplicar o **Transpilador (m2cgen)**. Ele tr
 
 Junto com a matemática da IA, o projeto conta com um Sniffer ativo escrito em C Nativo. Ele intercepta o tráfego em tempo real no Kernel do roteador (usando `libpcap`), converte o fluxo IP/TCP/UDP em variáveis estatísticas e entrega direto para a sua IA.
 
-### 📥 Modo Zero-Setup: Binário Pré-Compilado (Releases)
+### 📥 Binário Pré-Compilado (Releases)
 
 Se você baixou o binário pronto diretamente da aba **Releases** do GitHub para a sua arquitetura, não é necessário compilar nada. Basta dar permissão de execução e rodar:
 
