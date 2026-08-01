@@ -26,11 +26,24 @@ A Fase 4 do pipeline se encarrega de aplicar o **Transpilador (m2cgen)**. Ele tr
 
 ## 🛰️ 2. O IoT-Shield Sniffer (Como Rodar no Roteador)
 
-Junto com a matemática da IA, o projeto conta com um Sniffer ativo escrito em C Nativo. Ele intercepta o tráfego em tempo real no Kernel do roteador (usando `libpcap`), converte o fluxo IP/TCP/UDP em variáveis estatísticas e entrega direto na boca da sua IA.
+Junto com a matemática da IA, o projeto conta com um Sniffer ativo escrito em C Nativo. Ele intercepta o tráfego em tempo real no Kernel do roteador (usando `libpcap`), converte o fluxo IP/TCP/UDP em variáveis estatísticas e entrega direto para a sua IA.
 
-### Como Compilar
+### 📥 Modo Zero-Setup: Binário Pré-Compilado (Releases)
 
-Se você precisar recompilar manualmente no servidor ou roteador (certifique-se de que tenha os pacotes `gcc` e `libpcap-dev`):
+Se você baixou o binário pronto diretamente da aba **Releases** do GitHub para a sua arquitetura, não é necessário compilar nada. Basta dar permissão de execução e rodar:
+
+```bash
+chmod +x iot_shield_sniffer
+
+```
+
+### ⚙️ Como Compilar Manualmente (Cross-Compilation)
+
+**Atenção:** O comando `./scripts/run.sh --phase export` da etapa anterior **já compila o binário automaticamente** para a máquina onde o treinamento ocorreu!
+
+Você só precisará recompilar manualmente caso vá transferir o firmware para um roteador com arquitetura diferente da sua máquina (ex: de um PC x86 para um roteador ARM ou MIPS).
+
+Neste caso, envie os arquivos fonte (`iot_shield_model.c` e `iot_shield_sniffer.c`) para o roteador de destino (que deve conter o `gcc` e `libpcap-dev` instalados) e execute:
 
 ```bash
 cd results/
@@ -38,7 +51,7 @@ gcc -O3 iot_shield_model.c iot_shield_sniffer.c -o iot_shield_sniffer -lpcap -lm
 
 ```
 
-*Nota: Usamos a flag `-O3` para forçar o GCC a aplicar Otimização Máxima de CPU*
+*Nota: Usamos a flag `-O3` para forçar o compilador a aplicar Otimização Máxima de CPU, garantindo a latência de microssegundos.*
 
 ### Modo 1: Análise Forense Offline (Arquivos PCAP)
 
