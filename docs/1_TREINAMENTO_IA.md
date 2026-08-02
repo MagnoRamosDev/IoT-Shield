@@ -89,6 +89,4 @@ Além das tabelas maravilhosas no Dashboard, o sistema vai gerar os seguintes ar
 
 ---
 
-## 🛠️ O que fazer em caso de erro?
-
 👉 Após treinar sua IA (Fase 3), siga para o manual **[2_USANDO_FIRMWARE_C.md](2_USANDO_FIRMWARE_C.md)** para converter sua IA para Hardware nativo!
