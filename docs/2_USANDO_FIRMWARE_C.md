@@ -51,7 +51,7 @@ gcc -O3 iot_shield_model.c iot_shield_sniffer.c -o iot_shield_sniffer -lpcap -lm
 chmod +x iot_shield_sniffer
 ```
 
-*Nota: Usamos a flag `-O3` para forçar o compilador a aplicar Otimização Máxima de CPU, garantindo a latência de microssegundos.*
+*Nota: Usamos a flag `-O3` para forçar o compilador a aplicar Otimização Máxima de CPU.*
 
 ### Modo 1: Análise Forense Offline (Arquivos PCAP)
 
