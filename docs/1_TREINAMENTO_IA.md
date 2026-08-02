@@ -14,7 +14,7 @@ Antes de rodar a IA, você precisa fornecer o tráfego que ela vai estudar e rot
      data/pcaps/Benign/trabalho_normal.pcap 0.0.0.0
      data/pcaps/Mirai/ataque_noturno.pcap 192.168.1.195
      ```
-  - **Nota:** Cada linha do arquivo é para uma base de dados diferentes e voce pode colocar quantos quiser, além disso o arquivo não pode conter comentários nem outro tipo de informação fora os dadasets e ips.
+   - **Nota:** Cada linha do arquivo é para uma base de dados diferentes e voce pode colocar quantos quiser, além disso o arquivo não pode conter comentários nem outro tipo de informação fora os dadasets e ips.
 3. Configure a lista de classes editando o arquivo **`config/excluded_features.txt`** caso queira que a IA ignore atributos irrelevantes que possam causar viés (como endereços IP diretos, portas específicas ou MAC address).
    - **Nota:** Por padrão, as features que já vieram excluídas nesse arquivo foram cuidadosamente removidas pensando no treinamento contra vírus do tipo **Botnets** (Mirai, Bashlite, etc), forçando a IA a focar no comportamento do fluxo (Flow Rate, P.I.A.T) em vez de focar nos endereços. Se o seu objetivo for treinar a IA para descobrir outro tipo de ataque, sinta-se livre para escolher suas próprias features!
 
