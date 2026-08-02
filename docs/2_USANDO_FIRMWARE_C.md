@@ -98,7 +98,7 @@ O firmware do **IoT-Shield** usa **Metaprogramação em Tempo de Compilação** 
 * **Seleção Dinâmica**: O código C se **adapta sozinho** e exclui cálculos matemáticos se você habilitar ou desabilitar (no `excluded_features.txt`) qualquer uma das **45 variáveis padrão** estritamente mapeadas pelo buffer do projeto. O GCC aplicará *Dead Code Elimination (DCE)* no C automaticamente.
 * **Criação de Novas Features**: No entanto, caso você (ou outro pesquisador) programe do zero uma **46ª Feature** (variável totalmente nova) dentro do `extractor.py`, o motor C não saberá como calculá-la nativamente a partir dos bytes brutos. Nesse caso, será obrigatório modificar o script Python de transpilação (`export_to_c.py`) e a estrutura estática do arquivo `iot_shield_sniffer.c` para ensinar ao compilador qual é a matemática C equivalente à nova feature Python.
 
-## 🗄️ Bases de Dados (Datasets) Suportadas
+## 🗄️ Bases de Dados (Datasets) de Modelo
 
 O IoT-Shield foi projetado para consumir tráfego de rede bruto (`.pcap`). Para reproduzir os testes acadêmicos ou treinar a sua própria IA, recomendamos as seguintes bases de dados de referência:
 
