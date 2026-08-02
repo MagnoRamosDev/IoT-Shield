@@ -59,7 +59,7 @@ Geralmente temos 90% de tráfego benigno e 10% de vírus (ou vice-versa). Se a I
 > Se você utilizar um arquivo `.pcap` muito pequeno (apenas para testes rápidos), a Fase 2 não encontrará fluxos suficientes e será abortada. Como mecanismo de autolimpeza, o sistema deletará a pasta temporária `data/tmp/` para liberar espaço no SSD, e **a pasta `results/` ficará vazia**.
 >
 > **Como resolver (Modo de Teste):**
-> Se você está apenas validando o funcionamento do software com poucos dados, abra o arquivo `src/balancer.py`, localize a variável `MIN_GROUP = 10000` e reduza seu valor (ex: `MIN_GROUP = 100`). Após a alteração, rode a Fase 1 (Extração) novamente, seguida da Fase 2.
+> Se você está apenas validando o funcionamento do software com poucos dados, abra o arquivo `src/balancer.py`, localize a variável `MIN_GROUP = 10000` e reduza seu valor (ex: `MIN_GROUP = 1`). Após a alteração, rode a Fase 1 (Extração) novamente, seguida da Fase 2.
 
 ### Fase 3: Treinamento (Training)
 
