@@ -33,7 +33,7 @@ Junto com a matemática da IA, o projeto conta com um Sniffer ativo escrito em C
 Se você baixou o binário pronto diretamente da aba **Releases** do GitHub para a sua arquitetura, não é necessário compilar nada. Basta dar permissão de execução e rodar:
 
 ```bash
-chmod +x iot_shield_sniffer
+chmod +x iot_shield-Linux-x86_64
 
 ```
 
@@ -48,7 +48,7 @@ Neste caso, envie os arquivos fonte (`iot_shield_model.c` e `iot_shield_sniffer.
 ```bash
 cd results/
 gcc -O3 iot_shield_model.c iot_shield_sniffer.c -o iot_shield_sniffer -lpcap -lm
-
+chmod +x iot_shield_sniffer
 ```
 
 *Nota: Usamos a flag `-O3` para forçar o compilador a aplicar Otimização Máxima de CPU, garantindo a latência de microssegundos.*
@@ -98,4 +98,25 @@ O firmware do **IoT-Shield** usa **Metaprogramação em Tempo de Compilação** 
 * **Seleção Dinâmica**: O código C se **adapta sozinho** e exclui cálculos matemáticos se você habilitar ou desabilitar (no `excluded_features.txt`) qualquer uma das **45 variáveis padrão** estritamente mapeadas pelo buffer do projeto. O GCC aplicará *Dead Code Elimination (DCE)* no C automaticamente.
 * **Criação de Novas Features**: No entanto, caso você (ou outro pesquisador) programe do zero uma **46ª Feature** (variável totalmente nova) dentro do `extractor.py`, o motor C não saberá como calculá-la nativamente a partir dos bytes brutos. Nesse caso, será obrigatório modificar o script Python de transpilação (`export_to_c.py`) e a estrutura estática do arquivo `iot_shield_sniffer.c` para ensinar ao compilador qual é a matemática C equivalente à nova feature Python.
 
+## 🗄️ Bases de Dados (Datasets) Usadas no binário da aba releases
+
+O IoT-Shield foi projetado para consumir tráfego de rede bruto (`.pcap`). Para reproduzir os testes acadêmicos ou treinar a sua própria IA, recomendamos as seguintes bases de dados de referência:
+
+* **[SimNet](https://github.com/MagnoRamosDev/SimNet)**: Ferramenta determinística criada em conjunto com este projeto para gerar topologias de tráfego IoT e humano de forma controlada via contêineres.
+* **[CIC-IDS-2017](https://www.unb.ca//cic/datasets/ids-2017.html)**: Base de dados da Universidade de New Brunswick, amplamente utilizada na literatura para extração de amostras de tráfego benigno de alta fidelidade.
+* **[IoT-23](https://www.stratosphereips.org/datasets-iot23)**: Base de dados do Stratosphere Laboratory contendo capturas de rede reais de malwares IoT (como as botnets Mirai e Bashlite).
+
+### 🧩 Como integrar essas bases no IoT-Shield?
+
+A integração de qualquer base de dados externa no pipeline é extremamente simples e não requer alterações no código:
+
+1. **Download:** Baixe os arquivos `.pcap` ou `.pcapng` das bases de dados acima.
+2. **Armazenamento:** Coloque os arquivos baixados dentro do diretório `data/pcaps/`.
+3. **Mapeamento (Rotulagem):** Abra o arquivo `data/datasets_list.txt` e adicione o caminho do arquivo seguido do **IP do Atacante**. Se o arquivo contiver apenas tráfego limpo (benigno), utilize o IP `0.0.0.0`.
+
+**Exemplo de configuração no `datasets_list.txt`:**
+```text
+data/pcaps/CIC-IDS-2017/monday_benign.pcap 0.0.0.0
+data/pcaps/IoT-23/mirai_capture.pcap 192.168.1.100
+data/pcaps/SimNet/ataque_simulado.pcap 10.0.0.5
 ```
