@@ -19,7 +19,27 @@ O **IoT-Shield** moderniza essa defesa! Treinamos um algoritmo *Random Forest* (
 
 ## ⚙️ Instalação e Setup
 
-Antes de iniciar qualquer treinamento, é obrigatório preparar o ecossistema isolado do Python.
+Antes de clonar o projeto, é obrigatório garantir que o seu sistema operacional possui as ferramentas básicas de compilação e o ecossistema Python instalados.
+
+### 1. Pré-requisitos do Sistema (Linux)
+
+- python3
+- python3-venv
+- gcc
+- libpcap-dev
+
+Se você estiver usando Ubuntu, Debian ou derivados, instale os pacotes essenciais executando:
+```bash
+sudo apt update
+sudo apt install python3 python3-venv gcc libpcap-dev
+```
+
+* **python3 e python3-venv:** Necessários para o treinamento da IA e criação do ecossistema isolado.
+* **gcc e libpcap-dev:** Necessários para compilar o código C nativo e capturar os pacotes de rede na Fase 4.
+
+### 2. Configurando o Ambiente do IoT-Shield
+
+Com os pré-requisitos instalados, você pode preparar o ecossistema isolado do projeto:
 
 ```bash
 # 1. Clone o repositório
@@ -28,7 +48,6 @@ cd IoT-Shield
 
 # 2. Rode o script de instalação (Cria o venv e instala as dependências)
 bash scripts/setup.sh
-
 ```
 
 ---
