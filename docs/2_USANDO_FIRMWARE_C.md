@@ -57,9 +57,9 @@ chmod +x iot_shield_sniffer
 
 Se você quer simular tráfego jogando um arquivo capturado contra a IA C:
 
+Exemplo:
 ```bash
 ./iot_shield_sniffer ../data/pcaps/Benign/dataset_benign.pcap
-
 ```
 
 *O binário engolirá milhares de pacotes em poucos milissegundos e aplicará a detecção retroativamente.*
@@ -68,6 +68,7 @@ Se você quer simular tráfego jogando um arquivo capturado contra a IA C:
 
 Para colocar o escudo para funcionar na vida real e interceptar qualquer malware que passe pela placa de rede:
 
+Exemplo:
 ```bash
 sudo ./iot_shield_sniffer eth0
 
