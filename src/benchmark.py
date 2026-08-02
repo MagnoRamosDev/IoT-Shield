@@ -177,8 +177,29 @@ void benchmark_batch(double * inputs, double * outputs, int n_samples, int n_fea
     print_table(table)
 
     # ========================================================
-    # END-TO-END BENCHMARK (Sniffer + AI)
+    # COMPILAÇÃO DO EXECUTÁVEL FINAL E BENCHMARK E2E
     # ========================================================
+
+    # 1. Compila o binário final independente de ter o benchmark.pcap ou não
+    c_sniffer_src = os.path.join(out_dir, "iot_shield_sniffer.c")
+    c_model_src = os.path.join(out_dir, "iot_shield_model.c")
+    c_sniffer = os.path.join(out_dir, "iot_shield_sniffer")
+
+    print_ui("\n[bold cyan][*] Compiling Final C Sniffer Executable...[/bold cyan]")
+    compile_cmd = (
+        f"gcc -O3 {c_sniffer_src} {c_model_src} -lpcap -lm -I {out_dir} -o {c_sniffer}"
+    )
+    if os.system(compile_cmd) != 0:
+        print_ui(
+            "[bold red][!] Failed to compile C sniffer. Ensure gcc and libpcap-dev are installed.[/bold red]"
+        )
+        return
+    else:
+        print_ui(
+            f"[bold green][+] Executable generated successfully at: {c_sniffer}[/bold green]"
+        )
+
+    # 2. Executa o Benchmark apenas se o arquivo existir
     bench_pcap = os.path.join(out_dir, "benchmark.pcap")
     if os.path.exists(bench_pcap):
         print_ui(
@@ -241,17 +262,7 @@ if os.path.exists(npy_path):
         # 2. Benchmark Python End-to-End
         time_e2e_py, cpu_py, ram_py = run_with_time(["./venv/bin/python", py_e2e_path])
 
-        # 3. Compile and Benchmark C End-to-End
-        c_sniffer_src = os.path.join(out_dir, "iot_shield_sniffer.c")
-        c_model_src = os.path.join(out_dir, "iot_shield_model.c")
-        c_sniffer = os.path.join(out_dir, "iot_shield_sniffer")
-
-        print_ui("[bold cyan][*] Compiling C Sniffer...[/bold cyan]")
-        compile_cmd = f"gcc -O3 {c_sniffer_src} {c_model_src} -lpcap -lm -I {out_dir} -o {c_sniffer}"
-        if os.system(compile_cmd) != 0:
-            print_ui("[bold red][!] Failed to compile C sniffer.[/bold red]")
-            return
-
+        # 3. Benchmark C End-to-End (já compilado na etapa 1)
         time_e2e_c, cpu_c, ram_c = run_with_time([c_sniffer, bench_pcap])
 
         # 4. Benchmark C Emulated OpenWRT Router (1GHz, 128MB)
