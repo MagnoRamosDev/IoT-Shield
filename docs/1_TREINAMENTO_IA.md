@@ -52,6 +52,15 @@ Geralmente temos 90% de tráfego benigno e 10% de vírus (ou vice-versa). Se a I
 
 **Resultado:** Serão gerados os arquivos `results/fold_X.csv` contendo as dobras balanceadas.
 
+> ⚠️ **Aviso Importante para Testes com PCAPs Pequenos**
+>
+> O IoT-Shield foi arquitetado para processar *Big Data*. Por padrão, o algoritmo de balanceamento exige que existam no mínimo **10.000 fluxos** de um mesmo protocolo/classe para considerá-lo estatisticamente válido para o treinamento.
+> 
+> Se você utilizar um arquivo `.pcap` muito pequeno (apenas para testes rápidos), a Fase 2 não encontrará fluxos suficientes e será abortada. Como mecanismo de autolimpeza, o sistema deletará a pasta temporária `data/tmp/` para liberar espaço no SSD, e **a pasta `results/` ficará vazia**.
+>
+> **Como resolver (Modo de Teste):**
+> Se você está apenas validando o funcionamento do software com poucos dados, abra o arquivo `src/balancer.py`, localize a variável `MIN_GROUP = 10000` e reduza seu valor (ex: `MIN_GROUP = 100`). Após a alteração, rode a Fase 1 (Extração) novamente, seguida da Fase 2.
+
 ### Fase 3: Treinamento (Training)
 
 Aqui a mágica acontece. O algoritmo de **Random Forest** (Árvore de Decisão) será alimentado com os dados balanceados usando Validação Cruzada (Cross-Validation).
