@@ -23,7 +23,7 @@ Antes de iniciar qualquer treinamento, é obrigatório preparar o ecossistema is
 
 ```bash
 # 1. Clone o repositório
-git clone [https://github.com/SEU_USUARIO/IoT-Shield.git](https://github.com/SEU_USUARIO/IoT-Shield.git)
+git clone https://github.com/MagnoRamosDev/IoT-Shield.git
 cd IoT-Shield
 
 # 2. Rode o script de instalação (Cria o venv e instala as dependências)
