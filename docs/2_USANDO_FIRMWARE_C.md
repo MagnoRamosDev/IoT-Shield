@@ -126,4 +126,4 @@ Após mapear os arquivos, basta rodar o comando da Fase 1 (`./scripts/run.sh --p
 
 > ⚠️ **AVISO DE VARIABILIDADE DE RESULTADOS**
 > É importante ressaltar que modelos de *Machine Learning* são reflexos diretos dos dados que consomem. As métricas de desempenho (Acurácia, F1-Score, Falsos Positivos) variam de acordo com as bases de dados escolhidas, a proporção de ataques inserida e os tipos de tráfego legítimo presentes.
-> A utilização de *datasets* diferentes daqueles descritos no artigo original resultará em matrizes de confusão distintas. Para obter a máxima precisão de defesa no seu cenário, recomendamos capturar e incluir amostras de tráfego real da sua própria rede local durante o treinamento.
+> A utilização de *datasets* diferentes daqueles descritos no artigo original resultará em matrizes de confusão distintas.
